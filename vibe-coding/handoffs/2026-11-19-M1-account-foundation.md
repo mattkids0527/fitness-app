@@ -2,6 +2,7 @@
 
 - 更新日期：2026-11-19
 - 對應任務：[M1 帳號基礎](../milestones/M1-account-foundation.md)
+- 分支：`milestone/M1-account-foundation`（M1 全部完成後開 PR 合回 `main`）
 - 目前進度：T1 環境 已完成，下一步 T2 模組基礎建設
 
 ## ⚠️ 特別注意：T1 環境與本地開發需多一步驟
@@ -43,3 +44,4 @@ docker compose up -d
 | 日期 | Task | 內容 |
 |---|---|---|
 | 2026-11-19 | T1 | 完成：PostgreSQL、語系 zh_TW、時區 Asia/Taipei |
+| 2026-11-19 | — | 確立分支流程：一個 milestone 一個分支，完成後 PR 合回 `main`（見 CLAUDE.md「分支流程」） |

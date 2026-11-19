@@ -111,6 +111,14 @@ CI（`.github/workflows/`）在 push/PR 到 `main`、`develop` 時執行：Pint 
 - 每一份 milestone 依照每一項 Task 依序進行，每執行完一步，詢問使用者是否進行下一步 Task。
 - handoff 記錄這次改動的進度交接，下次開始 session 時參考。
 
+### 分支流程（一個 milestone 一個分支）
+
+- 每份 milestone 開始實作前，從最新的 `main` 開一個分支，名稱與 milestone 檔名對應：`milestone/<milestone 檔名>`（例如 `milestone/M1-account-foundation`）。
+- 該 milestone 的所有 Task 都在這個分支上 commit；milestone 與 handoff 檔內記錄對應的分支名稱。
+- 開始 session 時先確認目前分支與進行中的 milestone 相符，不在 `main` 上直接開發。
+- milestone 全部 Task 完成後，push 分支並開 PR 合回 `main`（讓 CI 的 Pint、Prettier、ESLint、PHPUnit 在合併前執行），以 merge commit（`--no-ff`）合併，不用 squash，保留每個 milestone 的起訖節點。
+- 合併後，下一份 milestone 再從更新後的 `main` 開新分支。
+
 ### 測試情境紀錄（`vibe-coding/tests/`）
 
 - `vibe-coding/tests/` 只放測試情境的文件；測試程式碼與測試資料仍放在專案根目錄的 `tests/`（pytest 預設從這裡找測試）。
