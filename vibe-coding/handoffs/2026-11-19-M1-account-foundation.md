@@ -2,16 +2,16 @@
 
 - 更新日期：2026-11-19
 - 對應任務：[M1 帳號基礎](../milestones/M1-account-foundation.md)
-- 分支：`milestone/M1-account-foundation`（M1 全部完成後開 PR 合回 `main`）
-- 目前進度：T1～T4 已完成，下一步 T5 前端實作與 PWA
-- 最後 commit：`docs(ui): finalize M1 account demo screens`（工作目錄乾淨、尚未 push）
+- 分支：`milestone/M1-account-foundation`（已以 `--no-ff` merge commit 合回本地 `main`，**尚未 push**）
+- 目前進度：M1 全部完成（T1～T6）。下一步是 M2 Google 登入，開始前先依工作準則討論 spec 與 demo。
 
 ## 下次接手從這裡開始
 
-1. 確認在 `milestone/M1-account-foundation` 分支，`docker compose up -d` 啟動資料庫。
-2. 先看本檔「T4 改動摘要」與 [畫面情境](../ui/features/m1-account/README.md)，瀏覽器打開 `vibe-coding/ui/features/m1-account/index.html` 對照 demo。
-3. 開始 T5 前，先跟使用者討論 T5 的拆分（建議順序：品牌色 token 與版型（底部 Tab／側欄）→ 首次設定頁 → 我的／編輯頁 → 體重紀錄 → 今日頁 → 既有頁面中文化 → PWA），確認後逐步進行。
-4. T5 需要的後端小改動：`GET /me/edit` 路由、設定檔 `calorie_floor`、把計算係數與每日目標傳給前端（Dashboard 也要）。
+1. `git checkout main`，確認 M1 的 merge commit 在 `main` 上；`docker compose up -d` 啟動資料庫。
+2. **尚未 push**：這台機器沒有 `gh`，M1 是在本地合回 `main` 的，CI（Pint、Prettier、ESLint、PHPUnit on PHP 8.4）還沒在 GitHub 上跑過。push `main` 後留意 CI 結果；本地已全部通過（67 tests）。
+3. 本地帳號用指令建立：`php artisan user:create --name=... --email=... --generate-password`（註冊已關閉）。
+4. 待使用者事後檢視：`vibe-coding/tests/` 的三份測試情境（這次照使用者指示一路做完，沒有先逐條確認）。
+5. M2 開始前：從更新後的 `main` 開 `milestone/M2-...` 分支；spec §3.1 已改為「帳號先以指令建立，登入後到設定頁綁定 Google」。
 
 ## ⚠️ 特別注意：T1 環境與本地開發需多一步驟
 
@@ -80,6 +80,31 @@ docker compose up -d
   - 手機底部 Tab 與桌機側欄以 768px（Tailwind `md`）切換；「＋」在手機是底部面板，桌機是置中對話框。
   - 體重增減顏色：下降綠、上升玫瑰紅，不用品牌橘，避免跟按鈕混淆。
 
+## T5 改動摘要（拆成 T5-1～T5-8，各自一個 commit）
+
+- **T5-1 後端補強**：`GET /me/edit`；設定 `calorie_floor`（男 1500／女 1200，`PROFILE_CALORIE_FLOOR_*`），`EnergyTargets` 多 `calorie_floor`、`below_floor`；表單選項加 `calculation`（前端預覽用係數）；體重列表改成 `?page=N` 顯示前 N 批並附較前一筆差值（`WeightLogService::history()` / `current()`）。新增 `daily-summary` 模組（`/today`、收集型事件 `DailySummaryCollecting`），profile 以 listener `AddProfileDailySummary` 加入每日目標與體重。starter kit 的 `dashboard`、`Welcome` 移除，`/` 依登入狀態導向。spec 模組表的依賴已更新（daily-summary 無依賴；profile 監聽它的事件）。
+- **T5-2 帳號**：註冊預設關閉（`AUTH_REGISTRATION_ENABLED`），登入頁隱藏註冊與忘記密碼連結（`AUTH_PASSWORD_RESET_ENABLED`）；`user:create`、`user:password` 指令（`app/Console/Commands/`）。發布 `config/inertia.php` 把測試頁面路徑改成小寫 `pages`。
+- **T5-3 版型**：橘色 token（`--primary`、`--brand-soft`、`--page`）、手機底部 Tab／桌機側欄、＋選單（`ResponsiveDialog`）、「即將推出」頁。`APP_NAME=Fitness`。
+- **T5-4 首次設定**：4 步、最後一步才送出；`useEnergyTargets` 與後端同公式；`components/profile/` 的 `BmrTool`、`TargetsCard`、`TargetsBreakdown`、`LowCalorieWarning`、`GoalField`、`ChoiceList`。enum 選項多了 `description`（語系 `activity_level_description`、`goal_description`）。
+- **T5-5 我的／編輯／體重**：`profile/Show`、`Edit`、`WeightLogs`；共用 `WeightLogForm` / `WeightLogSheet`；全站提示 `AppToast`。
+- **T5-6 今日頁**：`daily-summary/Today`（熱量環形圖、蛋白質還差、體重卡、即將推出卡片）。
+- **T5-7 中文化**：登入、忘記／重設密碼、信箱驗證、設定三頁、刪除帳號、使用者選單、外觀選項、sr-only 文字。未使用的 `AppHeader.vue`／`AuthCardLayout`／`AuthSplitLayout` 沒改。
+- **T5-8 PWA**：manifest、icons（`public/icons/`）、`sw.js`、`offline.html`、blade meta（含 `viewport-fit=cover`，底部 Tab 才吃得到 safe-area）；`favicon.ico` 換成 `favicon.svg`。
+- 驗收：以 390px 手機寬度實際操作「指令建帳號 → 登入 → 首次設定 → 今日 → ＋記錄體重」，數值與手算一致；桌機、深色模式截圖檢查；manifest／icons 200、service worker 控制頁面、離線顯示離線頁。
+
+## T6 改動摘要
+
+- 情境：`vibe-coding/tests/2026-11-19-profile.md`、`2026-11-19-daily-summary.md`、`2026-11-19-account.md`（已登記到 `tests/index.md`）。
+- 測試：`packages/fitness/profile/tests/{Unit,Feature}`、`packages/fitness/daily-summary/tests/Feature`、`tests/Feature/Console/UserCommandsTest.php`、`tests/Feature/ComingSoonTest.php`、`tests/Feature/HomeTest.php`、`tests/Feature/Auth/RegistrationTest.php`（改為驗證註冊關閉）。
+- 結果：67 tests / 444 assertions 全部通過、無 skip；Pint、Prettier、ESLint 通過。
+- 測試抓到的問題：`EnsureProfileCompleted` 原本用 Router 的 `pushMiddlewareToGroup()` 掛到 `web` 群組，HTTP Kernel 重新同步群組時被蓋掉，導致（至少在測試環境）未完成設定的使用者沒被導向。已改用 Kernel 的 `appendMiddlewareToGroup()`。
+
+## 已知事項
+
+- `npx vue-tsc --noEmit` 在 starter kit 原本的 `tsconfig.json`（`types` 引用 `vue/tsx`、`./resources/js/types`）就會失敗，CI 沒有跑型別檢查；這次新寫的檔案以暫時的 tsconfig 檢查過，沒有新增型別錯誤（剩下的都是 starter kit 既有的）。
+- 本地開發庫留有測試帳號（`ui-test@example.com`、`accept*@example.com`）已在收尾時刪除。
+- 計算係數與熱量下限仍是預設值，使用者可再調整 `packages/fitness/profile/src/config/fitness/profile.php`。
+
 ## T1 驗證結果
 
 - `php artisan migrate:fresh` 在 PostgreSQL 成功。
@@ -96,4 +121,7 @@ docker compose up -d
 | 2026-11-19 | T2 | 完成：profile 模組骨架與註冊 |
 | 2026-11-19 | T3 | 完成：profile 後端（migration、Repository、BMR／熱量計算、首次設定導向、Controller／FormRequest） |
 | 2026-11-19 | T4 | 完成：demo 定稿於 `vibe-coding/ui/features/m1-account/`（品牌色橘、熱量下限提醒、編輯頁獨立） |
+| 2026-11-19 | T5 | 完成：T5-1～T5-8（後端補強與 daily-summary、帳號指令與關閉註冊、版型、首次設定、我的／編輯／體重、今日、中文化、PWA） |
+| 2026-11-19 | T6 | 完成：67 tests 通過；修正 EnsureProfileCompleted 的掛載方式 |
+| 2026-11-19 | — | M1 以 `--no-ff` merge commit 合回本地 `main`（尚未 push） |
 | 2026-11-19 | — | 確立分支流程：一個 milestone 一個分支，完成後 PR 合回 `main`（見 CLAUDE.md「分支流程」） |

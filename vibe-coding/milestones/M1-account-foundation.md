@@ -1,6 +1,6 @@
 # M1 帳號基礎
 
-- 狀態：進行中
+- 狀態：完成（2026-11-19，已以 merge commit 合回 `main`）
 - 建立日期：2026-11-19
 - 分支：`milestone/M1-account-foundation`（完成後開 PR 合回 `main`）
 - 依據規格：[專案總覽規格 v1.0](../specs/2026-11-19-project-overview.md)（§2 技術架構、§2.4 模組劃分、§3.2 首次設定、§4 資料表、§5 頁面）
