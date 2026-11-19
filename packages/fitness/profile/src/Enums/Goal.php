@@ -24,6 +24,14 @@ enum Goal: string
     }
 
     /**
+     * 取得選項下方的簡短說明。
+     */
+    public function description(): string
+    {
+        return trans('FitnessProfile::options.goal_description.'.$this->value);
+    }
+
+    /**
      * 熱量調整方向：減脂為負、增肌為正、維持為零。
      */
     public function direction(): int

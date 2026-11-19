@@ -25,6 +25,14 @@ enum ActivityLevel: string
     }
 
     /**
+     * 取得選項下方的簡短說明。
+     */
+    public function description(): string
+    {
+        return trans('FitnessProfile::options.activity_level_description.'.$this->value);
+    }
+
+    /**
      * 取得設定檔中的活動係數。
      */
     public function factor(): float
