@@ -172,6 +172,8 @@
 | 介面語言 | 只做繁體中文 |
 | 程式架構 | 模組化（packages），規範見 `vibe-coding/coding-style.md` |
 | 模組 vendor | `packages/fitness/`，命名空間 `Fitness\` |
+| 品牌色 | 橘 `hsl(21 90% 48%)`（Tailwind orange-600），其餘沿用 shadcn-vue token（M1 T4 定案） |
+| 熱量目標下限 | 低於 男 1,500／女 1,200 kcal 時只提醒、不阻擋儲存，數值放設定檔可調（M1 T4 定案） |
 
 ## 8. 待決事項
 

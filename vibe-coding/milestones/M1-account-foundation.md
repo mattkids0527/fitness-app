@@ -55,6 +55,6 @@
 | T1 環境 | 完成 |
 | T2 模組基礎建設 | 完成 |
 | T3 profile 後端 | 完成 |
-| T4 設計 demo | 未開始 |
+| T4 設計 demo | 完成（[ui/features/m1-account](../ui/features/m1-account/README.md)） |
 | T5 前端實作與 PWA | 未開始 |
 | T6 測試 | 未開始 |

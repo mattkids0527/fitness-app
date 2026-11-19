@@ -3,7 +3,7 @@
 - 更新日期：2026-11-19
 - 對應任務：[M1 帳號基礎](../milestones/M1-account-foundation.md)
 - 分支：`milestone/M1-account-foundation`（M1 全部完成後開 PR 合回 `main`）
-- 目前進度：T1～T3 已完成，下一步 T4 設計 demo 畫面
+- 目前進度：T1～T4 已完成，下一步 T5 前端實作與 PWA
 
 ## ⚠️ 特別注意：T1 環境與本地開發需多一步驟
 
@@ -57,6 +57,21 @@ docker compose up -d
 - BMR 即時預覽（首次設定畫面輸入時）留到 T5 以前端公式計算；後端在 `/me` 頁提供計算結果。
 - tinker 驗證：3 組 BMR 與 3 組熱量／蛋白質目標皆與手算一致，未寫入資料庫。
 
+## T4 改動摘要
+
+- demo 定稿：`vibe-coding/ui/features/m1-account/`（`index.html`、`styles.css`、`app.js`），畫面情境見該目錄 `README.md`（m1-01～m1-17）；`vibe-coding/ui/index.md` 已登記。
+- 使用者決定：
+  - 品牌色：橘 `hsl(21 90% 48%)`（Tailwind orange-600），淺底 `hsl(33 100% 96%)`；T5 在 `resources/css/app.css` 加 `--brand` / `--brand-foreground` / `--brand-soft` token（淺色、深色各一組）。
+  - 熱量下限提醒：每日熱量目標低於 男 1,500／女 1,200 kcal 時只提醒、不阻擋。T5 在 `config/fitness/profile.php` 加 `calorie_floor`（`male` / `female`，走 `env()`），由後端算好或連同目標一起傳給前端，不要在前端寫死數值。
+  - 編輯個人資料為獨立頁面：T5 新增 `GET /me/edit`（`fitness.profile.edit`）與 `profile/Edit` 頁；`profile/Show` 只顯示。
+  - 首次設定分 4 步（基本資料 → 體重與活動量 → 目標與速度 → BMR 與每日目標確認），只在最後一步送出一次 `POST /onboarding`。
+  - 刪除體重：垃圾桶按鈕 + 確認對話框；只剩一筆時停用按鈕並顯示說明。
+- T5 實作提醒：
+  - 首次設定與編輯頁的 BMR／每日目標即時預覽在前端用同一套公式計算，係數從後端 props 帶入（`activity_factors`、`kcal_per_kg`、`protein_g_per_kg`、`goal_rate`），避免前後端數值不一致。
+  - 今日頁需要每日目標與最新體重，Dashboard 要從後端取得（可用 `EnergyTargetCalculator::forUser()`）。
+  - 手機底部 Tab 與桌機側欄以 768px（Tailwind `md`）切換；「＋」在手機是底部面板，桌機是置中對話框。
+  - 體重增減顏色：下降綠、上升玫瑰紅，不用品牌橘，避免跟按鈕混淆。
+
 ## T1 驗證結果
 
 - `php artisan migrate:fresh` 在 PostgreSQL 成功。
@@ -72,4 +87,5 @@ docker compose up -d
 | 2026-11-19 | T1 | 完成：PostgreSQL、語系 zh_TW、時區 Asia/Taipei |
 | 2026-11-19 | T2 | 完成：profile 模組骨架與註冊 |
 | 2026-11-19 | T3 | 完成：profile 後端（migration、Repository、BMR／熱量計算、首次設定導向、Controller／FormRequest） |
+| 2026-11-19 | T4 | 完成：demo 定稿於 `vibe-coding/ui/features/m1-account/`（品牌色橘、熱量下限提醒、編輯頁獨立） |
 | 2026-11-19 | — | 確立分支流程：一個 milestone 一個分支，完成後 PR 合回 `main`（見 CLAUDE.md「分支流程」） |
