@@ -20,7 +20,7 @@ declare module 'vite/client' {
     }
 }
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'Fitness';
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
@@ -32,9 +32,18 @@ createInertiaApp({
             .mount(el);
     },
     progress: {
-        color: '#4B5563',
+        color: '#e9590c',
     },
 });
 
 // This will set light / dark mode on page load...
 initializeTheme();
+
+// 註冊 service worker（PWA）；開發模式不註冊，避免快取干擾 Vite 熱更新
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {
+            // 註冊失敗不影響一般使用
+        });
+    });
+}
