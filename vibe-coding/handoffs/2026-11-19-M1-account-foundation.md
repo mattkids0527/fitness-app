@@ -3,7 +3,7 @@
 - 更新日期：2026-11-19
 - 對應任務：[M1 帳號基礎](../milestones/M1-account-foundation.md)
 - 分支：`milestone/M1-account-foundation`（M1 全部完成後開 PR 合回 `main`）
-- 目前進度：T1、T2 已完成，下一步 T3 profile 後端
+- 目前進度：T1～T3 已完成，下一步 T4 設計 demo 畫面
 
 ## ⚠️ 特別注意：T1 環境與本地開發需多一步驟
 
@@ -40,6 +40,23 @@ docker compose up -d
 - Provider 尚無 `setupMigrations` / `setupEvents`，等 T3 有 migration、事件時再加（寫作規範：沒用到的掛載點不寫）。
 - 驗證方式：暫時加一條路由與兩支空測試，確認 `route:list` 看得到 `fitness.profile.*`、`config('fitness.profile')` 與 `FitnessProfile::` 語系可取得、phpunit 掃到模組 Unit / Feature 測試（29 tests 通過），之後已移除。
 
+## T3 改動摘要
+
+- migration（模組內）：`users` 加 profile 欄位；新表 `weight_logs`（不設每日唯一，每次量測都留紀錄，目前體重取最新一筆）。
+- `Enums/`：`Gender`、`ActivityLevel`、`Goal`（附中文 label 與 `options()`）。用 enum 而非 User 常數，因為 User 在 `app/`，不讓它依賴模組。
+- `Services/`：`BmrCalculator`、`EnergyTargetCalculator`（+ `EnergyTargets`）、`OnboardingService`（交易內寫資料 + 第一筆體重 + 標記完成）、`WeightLogService`（最後一筆不能刪 → `CannotDeleteLastWeightLogException`）、`UserCalendar`（使用者時區的今天）。
+- `EnsureProfileCompleted`：Provider 加到 `web` 群組，例外路由在設定 `onboarding_except_routes`。
+- Controller 回傳的 Inertia 頁面 `profile/Onboarding`、`profile/Show`、`profile/WeightLogs` 尚未建立，T5 實作（頁面切分可依 T4 demo 再調整）。
+- `app/Models/User.php`：補 casts（`birth_date` 用 `date:Y-m-d`，避免 UTC 序列化後前端差一天）。
+- `UserFactory`：預設為已完成首次設定，新增 `notOnboarded()` state，讓既有測試不被導向。
+- 設定預設值（可在 `src/config/fitness/profile.php` 調整，待使用者確認）：
+  - 日常活動係數（不含運動）：久坐 1.2／輕度 1.3／中度 1.4／高度 1.5
+  - 蛋白質 g/kg：減脂 1.8／維持 1.2／增肌 1.6
+  - 每公斤 7700 kcal；每週速度：減脂 0.1～1.0、增肌 0.1～0.5 kg
+  - 熱量目標目前沒有下限保護（例如不低於 BMR）
+- BMR 即時預覽（首次設定畫面輸入時）留到 T5 以前端公式計算；後端在 `/me` 頁提供計算結果。
+- tinker 驗證：3 組 BMR 與 3 組熱量／蛋白質目標皆與手算一致，未寫入資料庫。
+
 ## T1 驗證結果
 
 - `php artisan migrate:fresh` 在 PostgreSQL 成功。
@@ -54,4 +71,5 @@ docker compose up -d
 |---|---|---|
 | 2026-11-19 | T1 | 完成：PostgreSQL、語系 zh_TW、時區 Asia/Taipei |
 | 2026-11-19 | T2 | 完成：profile 模組骨架與註冊 |
+| 2026-11-19 | T3 | 完成：profile 後端（migration、Repository、BMR／熱量計算、首次設定導向、Controller／FormRequest） |
 | 2026-11-19 | — | 確立分支流程：一個 milestone 一個分支，完成後 PR 合回 `main`（見 CLAUDE.md「分支流程」） |

@@ -2,15 +2,17 @@
 
 namespace Fitness\Profile;
 
+use Fitness\Profile\Http\Middleware\EnsureProfileCompleted;
+use Illuminate\Routing\Router;
 use Illuminate\Support\ServiceProvider;
 
 /**
- * profile 模組的進入點，於 bootstrap/providers.php 註冊後掛載設定、容器綁定、語系與路由。
+ * profile 模組的進入點，於 bootstrap/providers.php 註冊後掛載設定、容器綁定、語系、migration、路由與 middleware。
  */
 class ProfileServiceProvider extends ServiceProvider
 {
     /**
-     * 掛載模組的設定、容器綁定、語系與路由。
+     * 掛載模組的設定、容器綁定、語系、migration、路由與 middleware。
      */
     public function boot(): void
     {
@@ -18,7 +20,9 @@ class ProfileServiceProvider extends ServiceProvider
         $this->bindInstances();
         $this->registerSingletons();
         $this->setupLang();
+        $this->setupMigrations();
         $this->setupRoutes();
+        $this->setupMiddleware();
     }
 
     /**
@@ -58,10 +62,26 @@ class ProfileServiceProvider extends ServiceProvider
     }
 
     /**
+     * 載入模組自己的 migration。
+     */
+    protected function setupMigrations(): void
+    {
+        $this->loadMigrationsFrom(__DIR__.'/Database/migrations');
+    }
+
+    /**
      * 載入模組路由。
      */
     protected function setupRoutes(): void
     {
         $this->loadRoutesFrom(__DIR__.'/routes/web.php');
+    }
+
+    /**
+     * 把「未完成首次設定就導向首次設定頁」加到 web middleware 群組，讓所有頁面都受保護。
+     */
+    protected function setupMiddleware(): void
+    {
+        $this->app->make(Router::class)->pushMiddlewareToGroup('web', EnsureProfileCompleted::class);
     }
 }

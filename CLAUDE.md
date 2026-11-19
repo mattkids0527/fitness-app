@@ -46,7 +46,8 @@ CI（`.github/workflows/`）在 push/PR 到 `main`、`develop` 時執行：Pint 
 - 沒有獨立 API；controller / route closure 透過 `Inertia::render('路徑/Page', $props)` 回傳頁面，元件名稱對應 `resources/js/pages/{name}.vue`（解析邏輯在 `resources/js/app.ts`）。
 - 路由分檔：`routes/web.php`（入口，`require` 其他檔）、`routes/auth.php`（登入/註冊/密碼重設/信箱驗證）、`routes/settings.php`（個人資料、密碼、外觀設定）。
 - 全域共享 props 定義在 `app/Http/Middleware/HandleInertiaRequests.php::share()`（`name`、`quote`、`auth.user`），對應的 TS 型別在 `resources/js/types/index.ts`（`SharedData`、`User`、`BreadcrumbItem`、`NavItem`）。修改共享資料時兩邊要同步。
-- 表單驗證使用 `app/Http/Requests/` 下的 FormRequest。
+- 表單驗證使用 `app/Http/Requests/` 下的 FormRequest（模組的放在模組內 `Http/Requests/`）。
+- `profile` 模組把 `EnsureProfileCompleted` 加到 `web` middleware 群組：已登入但未完成首次設定（`users.onboarded_at` 為空）的使用者，所有頁面都會被導向 `/onboarding`。新增「未完成設定也要能進入」的路由時，把路由名稱加到 `config('fitness.profile.onboarding_except_routes')`。測試用的 `UserFactory` 預設為已完成設定，要測未完成狀態用 `->notOnboarded()`。
 
 ### 前端結構（`resources/js`，alias `@` → `resources/js`）
 - `pages/`：Inertia 頁面（`auth/`、`settings/`、`Dashboard.vue`、`Welcome.vue`）。
