@@ -4,11 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 專案概述
 
-以 Laravel 12 官方 Vue Starter Kit 為基礎建立的健身應用（目前仍是 starter kit 初始狀態）。技術堆疊：Laravel 12 + Inertia.js 2 + Vue 3（TypeScript）+ Tailwind CSS 3 + shadcn-vue（radix-vue）+ Ziggy。預設資料庫為 SQLite（`database/database.sqlite`）。
+以 Laravel 12 官方 Vue Starter Kit 為基礎建立的健身應用（目前仍是 starter kit 初始狀態）。技術堆疊：Laravel 12 + Inertia.js 2 + Vue 3（TypeScript）+ Tailwind CSS 3 + shadcn-vue（radix-vue）+ Ziggy。資料庫為 PostgreSQL 16（以 `docker-compose.yml` 在本地起容器，對外 port 54329；開發庫 `fitness_app`、測試庫 `fitness_app_testing`）。語系 `zh_TW`（框架內建訊息在 `lang/zh_TW/`），時區 `Asia/Taipei`。
 
 ## 常用指令
 
 ```bash
+# 資料庫容器（本地開發、跑 migrate 或測試前要先啟動）
+docker compose up -d
+docker compose down              # 停止（加 -v 會連資料一起刪除）
+
 # 開發環境（同時啟動 artisan serve、queue:listen、pail 日誌、vite）
 composer dev
 
@@ -23,7 +27,7 @@ npm run format:check
 # PHP 程式風格
 vendor/bin/pint
 
-# 測試（PHPUnit；測試使用 in-memory SQLite）
+# 測試（PHPUnit；使用 PostgreSQL 的 fitness_app_testing，需先 docker compose up -d）
 ./vendor/bin/phpunit
 ./vendor/bin/phpunit tests/Feature/DashboardTest.php           # 單一檔案
 ./vendor/bin/phpunit --filter test_guests_are_redirected_to_the_login_page  # 單一測試
@@ -32,7 +36,9 @@ php artisan test --filter=ProfileUpdateTest
 
 注意：`tests/Pest.php` 存在，但 composer 並未安裝 Pest，現有測試皆為 PHPUnit class 寫法；新增測試請沿用 PHPUnit 風格（或先安裝 Pest）。
 
-CI（`.github/workflows/`）在 push/PR 到 `main`、`develop` 時執行：Pint + Prettier + ESLint，以及 `npm run build` 後跑 PHPUnit（PHP 8.4、Node 22）。Feature 測試會渲染 Inertia 頁面，需要已建置的 Vite manifest，本地若測試因 manifest 缺失失敗，先跑 `npm run build`。
+CI（`.github/workflows/`）在 push/PR 到 `main`、`develop` 時執行：Pint + Prettier + ESLint，以及 `npm run build` 後跑 PHPUnit（PHP 8.4、Node 22，PostgreSQL 16 以 service container 提供，同樣對應 port 54329）。Feature 測試會渲染 Inertia 頁面，需要已建置的 Vite manifest，本地若測試因 manifest 缺失失敗，先跑 `npm run build`。
+
+測試庫 `fitness_app_testing` 由 `docker/postgres/init/` 的 SQL 在容器**第一次初始化**時建立；若 volume 早於此腳本存在，需 `docker compose down -v` 重建，或手動 `CREATE DATABASE fitness_app_testing`。
 
 ## 架構
 
@@ -53,6 +59,20 @@ CI（`.github/workflows/`）在 push/PR 到 `main`、`develop` 時執行：Pint 
 ### 程式風格
 - Prettier：4 空白縮排、單引號、行寬 150，含 organize-imports 與 tailwindcss 外掛（自動排序 import 與 class）。
 - `components.json` 中 shadcn-vue 的 alias 寫的是 `resources/js/Components`（大寫 C），實際目錄為小寫 `components`；用 shadcn-vue CLI 新增元件後需確認放到正確位置。
+
+### 模組化寫作規則
+
+業務功能一律以模組開發，完整規範與範例見 [vibe-coding/coding-style.md](vibe-coding/coding-style.md)，撰寫程式前必讀。重點：
+
+- **模組位置**：`packages/fitness/<module>/`（kebab-case），命名空間 `Fitness\<Module>`；`src/` 放程式、`tests/` 放該模組測試。`app/` 只放跨模組共用程式。
+- **註冊**：新增模組時同步更新根目錄 `composer.json` 的 psr-4（含 tests 的 autoload-dev）與 `bootstrap/providers.php`。
+- **Service Provider**：`boot()` 依序呼叫 `setupConfig` / `bindInstances` / `registerSingletons` / `setupLang` / `setupMigrations` / `setupRoutes` / `setupEvents`，一個掛載點一個方法。
+- **設定集中**：模組設定檔 `src/config/fitness/<module>.php`，以 `binds`（Repository 介面 → 實作）與 `singletons`（Manager）陣列宣告容器綁定；可調整數值走 `env()` → 設定檔。
+- **Repository**：資料存取一律透過 `Repositories/Contracts/` 介面，以 `app(介面::class)` 取得；跨模組只用對方的 Repository 介面或事件，不直接查對方資料表。
+- **Driver 模式**：同一件事有多種實作時，拆成「核心模組（Contract + abstract 基底 + Manager + helper）」與「driver 模組（`<核心>-<實作>`，只綁定 `fitness.<module>.<driver>`）」。
+- **事件驅動擴充**：模組間以事件溝通，發出方不依賴監聽方；擴充功能優先新增 listener，而非修改核心模組。收集型事件以 `addXxx()` / `getXxx()` 讓其他模組加入資料。
+- **歸屬**：migration、語系（`lang/zh_TW`，以 `Fitness<Module>::` 取用）、路由（名稱 `fitness.<module>.<action>`）、Exception（每種失敗一個類別）都放在擁有它的模組內。
+- **前端**：頁面放 `resources/js/pages/<module>/`，模組元件放 `components/<module>/`，型別放 `types/<module>.ts`。
 
 # USER GUIDE
 
