@@ -8,6 +8,8 @@ interface Tab {
     title: string;
     href: string;
     icon: Component;
+    // 其他也算在這個 Tab 底下的網址（例如設定頁屬於「我的」）
+    also?: string[];
 }
 
 const page = usePage();
@@ -20,13 +22,18 @@ const leftTabs: Tab[] = [
 
 const rightTabs: Tab[] = [
     { title: '健身', href: route('coming_soon.workouts', undefined, false), icon: Dumbbell },
-    { title: '我的', href: route('fitness.profile.show', undefined, false), icon: User },
+    { title: '我的', href: route('fitness.profile.show', undefined, false), icon: User, also: ['/settings'] },
 ];
 
 /**
- * 目前網址是否在該 Tab 底下（例如 /me/edit 屬於「我的」）。
+ * 目前網址是否在該網址底下（例如 /me/edit 屬於 /me）。
  */
-const isActive = (href: string) => page.url === href || page.url.startsWith(`${href}/`) || page.url.startsWith(`${href}?`);
+const isUnder = (href: string) => page.url === href || page.url.startsWith(`${href}/`) || page.url.startsWith(`${href}?`);
+
+/**
+ * 目前網址是否屬於該 Tab。
+ */
+const isActive = (tab: Tab) => isUnder(tab.href) || (tab.also ?? []).some(isUnder);
 </script>
 
 <template>
@@ -41,7 +48,7 @@ const isActive = (href: string) => page.url === href || page.url.startsWith(`${h
                 :href="tab.href"
                 :class="[
                     'flex flex-col items-center gap-0.5 py-1 text-[11px]',
-                    isActive(tab.href) ? 'font-semibold text-primary' : 'text-muted-foreground',
+                    isActive(tab) ? 'font-semibold text-primary' : 'text-muted-foreground',
                 ]"
             >
                 <component :is="tab.icon" class="size-5" />
@@ -60,7 +67,7 @@ const isActive = (href: string) => page.url === href || page.url.startsWith(`${h
                 :href="tab.href"
                 :class="[
                     'flex flex-col items-center gap-0.5 py-1 text-[11px]',
-                    isActive(tab.href) ? 'font-semibold text-primary' : 'text-muted-foreground',
+                    isActive(tab) ? 'font-semibold text-primary' : 'text-muted-foreground',
                 ]"
             >
                 <component :is="tab.icon" class="size-5" />

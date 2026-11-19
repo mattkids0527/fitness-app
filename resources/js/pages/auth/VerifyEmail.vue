@@ -17,20 +17,20 @@ const submit = () => {
 </script>
 
 <template>
-    <AuthLayout title="Verify email" description="Please verify your email address by clicking on the link we just emailed to you.">
-        <Head title="Email verification" />
+    <AuthLayout title="驗證 Email" description="請點擊我們寄到你信箱的連結，完成 Email 驗證。">
+        <Head title="Email 驗證" />
 
         <div v-if="status === 'verification-link-sent'" class="mb-4 text-center text-sm font-medium text-green-600">
-            A new verification link has been sent to the email address you provided during registration.
+            新的驗證連結已寄到你註冊時填寫的 Email。
         </div>
 
         <form @submit.prevent="submit" class="space-y-6 text-center">
             <Button :disabled="form.processing" variant="secondary">
                 <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
-                Resend verification email
+                重新寄送驗證信
             </Button>
 
-            <TextLink :href="route('logout')" method="post" as="button" class="mx-auto block text-sm"> Log out </TextLink>
+            <TextLink :href="route('logout')" method="post" as="button" class="mx-auto block text-sm"> 登出 </TextLink>
         </form>
     </AuthLayout>
 </template>

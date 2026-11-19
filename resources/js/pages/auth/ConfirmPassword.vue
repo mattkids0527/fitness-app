@@ -21,13 +21,13 @@ const submit = () => {
 </script>
 
 <template>
-    <AuthLayout title="Confirm your password" description="This is a secure area of the application. Please confirm your password before continuing.">
-        <Head title="Confirm password" />
+    <AuthLayout title="確認密碼" description="這是需要再次驗證的區域，請先輸入密碼再繼續。">
+        <Head title="確認密碼" />
 
         <form @submit.prevent="submit">
             <div class="space-y-6">
                 <div class="grid gap-2">
-                    <Label htmlFor="password">Password</Label>
+                    <Label for="password">密碼</Label>
                     <Input
                         id="password"
                         type="password"
@@ -44,7 +44,7 @@ const submit = () => {
                 <div class="flex items-center">
                     <Button class="w-full" :disabled="form.processing">
                         <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
-                        Confirm Password
+                        確認密碼
                     </Button>
                 </div>
             </div>
