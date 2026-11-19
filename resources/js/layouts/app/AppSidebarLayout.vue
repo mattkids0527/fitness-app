@@ -4,6 +4,8 @@ import AppContent from '@/components/AppContent.vue';
 import AppShell from '@/components/AppShell.vue';
 import AppSidebar from '@/components/AppSidebar.vue';
 import AppSidebarHeader from '@/components/AppSidebarHeader.vue';
+import AppToast from '@/components/AppToast.vue';
+import WeightLogSheet from '@/components/profile/WeightLogSheet.vue';
 import QuickAddDialog from '@/components/QuickAddDialog.vue';
 import type { BreadcrumbItemType } from '@/types';
 
@@ -25,5 +27,7 @@ withDefaults(defineProps<Props>(), {
         </AppContent>
         <AppBottomNav />
         <QuickAddDialog />
+        <WeightLogSheet />
+        <AppToast />
     </AppShell>
 </template>
