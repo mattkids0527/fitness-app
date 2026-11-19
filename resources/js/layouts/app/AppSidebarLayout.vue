@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import AppBottomNav from '@/components/AppBottomNav.vue';
 import AppContent from '@/components/AppContent.vue';
 import AppShell from '@/components/AppShell.vue';
 import AppSidebar from '@/components/AppSidebar.vue';
 import AppSidebarHeader from '@/components/AppSidebarHeader.vue';
+import QuickAddDialog from '@/components/QuickAddDialog.vue';
 import type { BreadcrumbItemType } from '@/types';
 
 interface Props {
@@ -17,9 +19,11 @@ withDefaults(defineProps<Props>(), {
 <template>
     <AppShell variant="sidebar">
         <AppSidebar />
-        <AppContent variant="sidebar">
+        <AppContent variant="sidebar" class="bg-page pb-[calc(env(safe-area-inset-bottom)+5rem)] md:pb-0">
             <AppSidebarHeader :breadcrumbs="breadcrumbs" />
             <slot />
         </AppContent>
+        <AppBottomNav />
+        <QuickAddDialog />
     </AppShell>
 </template>
