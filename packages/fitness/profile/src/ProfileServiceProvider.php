@@ -5,7 +5,7 @@ namespace Fitness\Profile;
 use Fitness\DailySummary\Events\DailySummaryCollecting;
 use Fitness\Profile\Http\Middleware\EnsureProfileCompleted;
 use Fitness\Profile\Listeners\AddProfileDailySummary;
-use Illuminate\Routing\Router;
+use Illuminate\Contracts\Http\Kernel as HttpKernel;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
@@ -83,10 +83,11 @@ class ProfileServiceProvider extends ServiceProvider
 
     /**
      * 把「未完成首次設定就導向首次設定頁」加到 web middleware 群組，讓所有頁面都受保護。
+     * 透過 HTTP Kernel 加入（不是直接改 Router），Kernel 每次處理請求重新同步群組時才不會被蓋掉。
      */
     protected function setupMiddleware(): void
     {
-        $this->app->make(Router::class)->pushMiddlewareToGroup('web', EnsureProfileCompleted::class);
+        $this->app->make(HttpKernel::class)->appendMiddlewareToGroup('web', EnsureProfileCompleted::class);
     }
 
     /**
