@@ -4,6 +4,14 @@
 - 對應任務：[M1 帳號基礎](../milestones/M1-account-foundation.md)
 - 分支：`milestone/M1-account-foundation`（M1 全部完成後開 PR 合回 `main`）
 - 目前進度：T1～T4 已完成，下一步 T5 前端實作與 PWA
+- 最後 commit：`docs(ui): finalize M1 account demo screens`（工作目錄乾淨、尚未 push）
+
+## 下次接手從這裡開始
+
+1. 確認在 `milestone/M1-account-foundation` 分支，`docker compose up -d` 啟動資料庫。
+2. 先看本檔「T4 改動摘要」與 [畫面情境](../ui/features/m1-account/README.md)，瀏覽器打開 `vibe-coding/ui/features/m1-account/index.html` 對照 demo。
+3. 開始 T5 前，先跟使用者討論 T5 的拆分（建議順序：品牌色 token 與版型（底部 Tab／側欄）→ 首次設定頁 → 我的／編輯頁 → 體重紀錄 → 今日頁 → 既有頁面中文化 → PWA），確認後逐步進行。
+4. T5 需要的後端小改動：`GET /me/edit` 路由、設定檔 `calorie_floor`、把計算係數與每日目標傳給前端（Dashboard 也要）。
 
 ## ⚠️ 特別注意：T1 環境與本地開發需多一步驟
 
