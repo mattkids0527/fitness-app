@@ -8,7 +8,7 @@
 
 ## 目標
 
-使用者註冊／登入後，第一次進站會被導到首次設定頁，填完性別、出生日期、身高、體重、日常活動量、目標後才能使用其他頁面；BMR 小工具可自動計算或手動覆寫；體重可持續記錄。整站改為手機優先版型（底部 Tab），可加到手機主畫面（PWA）。
+使用者以管理者用指令建立的帳號登入後（第一版不開放註冊），第一次進站會被導到首次設定頁，填完性別、出生日期、身高、體重、日常活動量、目標後才能使用其他頁面；BMR 小工具可自動計算或手動覆寫；體重可持續記錄。整站改為手機優先版型（底部 Tab），可加到手機主畫面（PWA）。
 
 ## 範圍
 
@@ -41,8 +41,32 @@
 **完成條件**：使用者確認 demo；features 目錄與 index 已更新。
 
 ### T5 前端實作與 PWA
-依確認的 demo 實作：`AppLayout` 加入手機版底部 Tab（桌機維持側欄）、`resources/js/pages/profile/` 下的首次設定、個人資料、體重紀錄頁，`resources/js/types/profile.ts` 型別，必要時更新 `HandleInertiaRequests::share()` 與 `types/index.ts`；starter kit 既有頁面（登入、註冊、設定、Dashboard）文字改繁體中文；加入 PWA（manifest、icons、service worker）。
-**完成條件**：`npm run build`、`npm run lint`、`npm run format:check` 通過；手機尺寸實際操作：註冊 → 被導到首次設定 → 完成後進入首頁 → 新增體重紀錄；可「加到主畫面」。
+依確認的 demo（[ui/features/m1-account](../ui/features/m1-account/README.md)）實作，拆成以下子步驟，每步完成後 commit 並詢問是否進行下一步。
+**完成條件**：`npm run build`、`npm run lint`、`npm run format:check` 通過；手機尺寸實際操作：以指令建立帳號 → 登入 → 被導到首次設定 → 完成後進入今日 → 新增體重紀錄；可「加到主畫面」。
+
+#### T5-1 後端補強
+`profile` 模組新增 `GET /me/edit`（`fitness.profile.edit` → `profile/Edit`）；設定檔加 `calorie_floor`（男 1500／女 1200，走 `env()`），`EnergyTargets` 回傳 `calorie_floor` 與 `below_floor`；首次設定、編輯頁 props 帶入計算係數（活動係數、每公斤熱量、蛋白質係數、目標速度範圍、最低年齡、熱量下限），讓前端即時預覽與後端一致。建立 `daily-summary` 模組骨架：擁有今日頁路由（取代 starter kit 的 `dashboard`，同步更新所有導向 `dashboard` 的地方），發出收集型事件，`profile` 以 listener 加入每日目標與最新體重。
+
+#### T5-2 帳號建立指令與關閉註冊
+第一版不開放註冊：`config/auth.php` 加開關（`AUTH_REGISTRATION_ENABLED`，預設關閉），關閉時不註冊 `register` 路由、登入頁不顯示註冊連結（保留 `RegisteredUserController` 與 `Register.vue`，日後打開開關即可使用）。新增 artisan 指令 `user:create`（姓名、Email、密碼，缺的以互動方式詢問；可用 `--generate-password` 產生隨機密碼並只顯示一次；建立的帳號 Email 視為已驗證、未完成首次設定），以及 `user:password`（重設指定帳號密碼，因為目前沒有寄信設定，忘記密碼信寄不出去，登入頁也隱藏「忘記密碼」連結）。指令放 `app/Console/Commands/`（帳號屬於 starter kit 的共用範圍）。既有的註冊測試依新行為調整，測試情境先列給使用者確認。
+
+#### T5-3 品牌色與版型
+`app.css` 加 `--brand` / `--brand-foreground` / `--brand-soft`（淺色、深色各一組）；`AppLayout` 手機（< 768px）底部 Tab、桌機側欄（快速新增 + 今日／飲食／健身／我的）；＋選單手機為 `Sheet`、桌機為 `Dialog`；`routes/web.php` 暫放 `/meals`、`/workouts` 指向共用的「即將推出」頁，M3／M5 模組建立後移除。
+
+#### T5-4 首次設定頁
+`profile/Onboarding.vue` 分 4 步、最後一步才送出；共用計算 composable `useEnergyTargets`；`components/profile/` 放 `BmrTool`、`TargetsBreakdown`、`LowCalorieWarning`；型別 `types/profile.ts`。
+
+#### T5-5 我的、編輯、體重紀錄
+`profile/Show.vue`、`profile/Edit.vue`、`profile/WeightLogs.vue`；記錄體重面板為共用元件（今日、我的、＋選單共用）；刪除確認、只剩一筆時停用；超過 20 筆顯示「載入更多」。
+
+#### T5-6 今日頁
+熱量環形圖、蛋白質還差多少、體重卡片；餐點、喝水、運動為即將推出卡片。
+
+#### T5-7 既有頁面中文化
+登入、忘記／重設密碼、信箱驗證、設定三頁、使用者選單、頁面標題改繁體中文；`/` 未登入導向登入、已登入導向今日（不保留 starter kit 的 Welcome 頁）。
+
+#### T5-8 PWA 與驗收
+手寫 `public/manifest.webmanifest`、精簡 `public/sw.js`（只快取 build 資源，離線時顯示離線頁）、icons（橘底活動曲線：192、512、maskable、apple-touch-icon）、`app.blade.php` meta；跑 build／lint／format:check，並以 390px 手機寬度走完完成條件的流程。
 
 ### T6 測試
 先把測試情境條列給使用者確認（預計涵蓋：BMR 與熱量目標計算、未完成首次設定的導向、首次設定表單驗證、個人資料修改、體重紀錄新增／刪除與只能操作自己的資料），確認後寫成 `vibe-coding/tests/<日期>-profile.md` 並更新 `vibe-coding/tests/index.md`，再於 `packages/fitness/profile/tests/` 撰寫並執行。
@@ -56,5 +80,5 @@
 | T2 模組基礎建設 | 完成 |
 | T3 profile 後端 | 完成 |
 | T4 設計 demo | 完成（[ui/features/m1-account](../ui/features/m1-account/README.md)） |
-| T5 前端實作與 PWA | 未開始 |
+| T5 前端實作與 PWA | 進行中（T5-1） |
 | T6 測試 | 未開始 |

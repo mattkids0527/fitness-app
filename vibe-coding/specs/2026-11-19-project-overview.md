@@ -69,9 +69,10 @@
 ## 3. 功能模組
 
 ### 3.1 帳號與登入
-- Email 註冊／登入（starter kit 已有）。
+- Email 登入（starter kit 已有）。
+- **已決**：第一版不開放註冊，帳號由管理者以 artisan 指令 `user:create` 建立，使用者登入後自行到設定頁修改密碼；註冊功能保留程式碼，以設定開關關閉。
 - 設定頁「已連結帳號」：綁定／解除綁定 Google；綁定後可用 Google 登入。
-- **已決**：帳號一定先以 Email + 密碼註冊；綁定 Google 是註冊後的動作。
+- **已決**：帳號一定先有 Email + 密碼（第一版由指令建立）；綁定 Google 是登入後的動作。
   - 未綁定的 Google 帳號嘗試登入 → 拒絕，提示「請先以帳號密碼登入，再到設定頁綁定 Google」。
   - 因為每個帳號都有密碼，Google 帳號遺失時仍可用帳密登入並解除綁定。
 
@@ -173,6 +174,7 @@
 | 程式架構 | 模組化（packages），規範見 `vibe-coding/coding-style.md` |
 | 模組 vendor | `packages/fitness/`，命名空間 `Fitness\` |
 | 品牌色 | 橘 `hsl(21 90% 48%)`（Tailwind orange-600），其餘沿用 shadcn-vue token（M1 T4 定案） |
+| 註冊 | 第一版不開放，帳號以 `user:create` 指令建立，密碼由使用者登入後自行修改（M1 T5 定案） |
 | 熱量目標下限 | 低於 男 1,500／女 1,200 kcal 時只提醒、不阻擋儲存，數值放設定檔可調（M1 T4 定案） |
 
 ## 8. 待決事項
