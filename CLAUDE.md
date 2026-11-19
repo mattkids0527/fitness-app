@@ -4,11 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 專案概述
 
-以 Laravel 12 官方 Vue Starter Kit 為基礎建立的健身應用（目前仍是 starter kit 初始狀態）。技術堆疊：Laravel 12 + Inertia.js 2 + Vue 3（TypeScript）+ Tailwind CSS 3 + shadcn-vue（radix-vue）+ Ziggy。預設資料庫為 SQLite（`database/database.sqlite`）。
+以 Laravel 12 官方 Vue Starter Kit 為基礎建立的手機優先飲食／健身紀錄應用（M1 帳號基礎已完成：首次設定、BMR／每日目標、體重紀錄、今日頁、底部 Tab 版型、PWA）。技術堆疊：Laravel 12 + Inertia.js 2 + Vue 3（TypeScript）+ Tailwind CSS 3 + shadcn-vue（radix-vue）+ Ziggy。資料庫為 PostgreSQL 16（以 `docker-compose.yml` 在本地起容器，對外 port 54329；開發庫 `fitness_app`、測試庫 `fitness_app_testing`）。語系 `zh_TW`（框架內建訊息在 `lang/zh_TW/`），時區 `Asia/Taipei`。
 
 ## 常用指令
 
 ```bash
+# 資料庫容器（本地開發、跑 migrate 或測試前要先啟動）
+docker compose up -d
+docker compose down              # 停止（加 -v 會連資料一起刪除）
+
 # 開發環境（同時啟動 artisan serve、queue:listen、pail 日誌、vite）
 composer dev
 
@@ -23,29 +27,41 @@ npm run format:check
 # PHP 程式風格
 vendor/bin/pint
 
-# 測試（PHPUnit；測試使用 in-memory SQLite）
+# 帳號（第一版不開放註冊，帳號以指令建立；目前沒有寄信設定，忘記密碼改用指令重設）
+php artisan user:create --name="王小明" --email=ming@example.com --generate-password   # 缺的欄位會互動詢問
+php artisan user:password ming@example.com --generate-password
+
+# 測試（PHPUnit；使用 PostgreSQL 的 fitness_app_testing，需先 docker compose up -d）
 ./vendor/bin/phpunit
-./vendor/bin/phpunit tests/Feature/DashboardTest.php           # 單一檔案
-./vendor/bin/phpunit --filter test_guests_are_redirected_to_the_login_page  # 單一測試
-php artisan test --filter=ProfileUpdateTest
+./vendor/bin/phpunit packages/fitness/profile/tests            # 單一模組
+./vendor/bin/phpunit tests/Feature/HomeTest.php                 # 單一檔案
+./vendor/bin/phpunit --filter test_last_weight_log_cannot_be_deleted  # 單一測試
 ```
 
 注意：`tests/Pest.php` 存在，但 composer 並未安裝 Pest，現有測試皆為 PHPUnit class 寫法；新增測試請沿用 PHPUnit 風格（或先安裝 Pest）。
 
-CI（`.github/workflows/`）在 push/PR 到 `main`、`develop` 時執行：Pint + Prettier + ESLint，以及 `npm run build` 後跑 PHPUnit（PHP 8.4、Node 22）。Feature 測試會渲染 Inertia 頁面，需要已建置的 Vite manifest，本地若測試因 manifest 缺失失敗，先跑 `npm run build`。
+CI（`.github/workflows/`）在 push/PR 到 `main`、`develop` 時執行：Pint + Prettier + ESLint，以及 `npm run build` 後跑 PHPUnit（PHP 8.4、Node 22，PostgreSQL 16 以 service container 提供，同樣對應 port 54329）。Feature 測試會渲染 Inertia 頁面，需要已建置的 Vite manifest，本地若測試因 manifest 缺失失敗，先跑 `npm run build`。`assertInertia()` 會檢查頁面檔存在，路徑設定在 `config/inertia.php`（`resources/js/pages`，小寫）。測試情境紀錄在 `vibe-coding/tests/`。
+
+測試庫 `fitness_app_testing` 由 `docker/postgres/init/` 的 SQL 在容器**第一次初始化**時建立；若 volume 早於此腳本存在，需 `docker compose down -v` 重建，或手動 `CREATE DATABASE fitness_app_testing`。
 
 ## 架構
 
 ### 後端 → 前端：Inertia
 - 沒有獨立 API；controller / route closure 透過 `Inertia::render('路徑/Page', $props)` 回傳頁面，元件名稱對應 `resources/js/pages/{name}.vue`（解析邏輯在 `resources/js/app.ts`）。
-- 路由分檔：`routes/web.php`（入口，`require` 其他檔）、`routes/auth.php`（登入/註冊/密碼重設/信箱驗證）、`routes/settings.php`（個人資料、密碼、外觀設定）。
+- 路由分檔：`routes/web.php`（入口：`/` 未登入導向登入、已登入導向今日頁 `/today`；暫放 `/meals`、`/workouts` 的「即將推出」頁，飲食／健身模組完成後移除）、`routes/auth.php`（登入/註冊/密碼重設/信箱驗證）、`routes/settings.php`（帳號資料、密碼、外觀設定）。業務路由在各模組的 `src/routes/web.php`。
+- 註冊預設關閉：`config('auth.registration_enabled')`（`AUTH_REGISTRATION_ENABLED`）為 false 時不註冊 `register` 路由；`config('auth.password_reset_enabled')`（`AUTH_PASSWORD_RESET_ENABLED`）控制登入頁是否顯示「忘記密碼」。登入後首頁是 `fitness.daily_summary.show`（starter kit 原本的 `dashboard` 已移除）。
 - 全域共享 props 定義在 `app/Http/Middleware/HandleInertiaRequests.php::share()`（`name`、`quote`、`auth.user`），對應的 TS 型別在 `resources/js/types/index.ts`（`SharedData`、`User`、`BreadcrumbItem`、`NavItem`）。修改共享資料時兩邊要同步。
-- 表單驗證使用 `app/Http/Requests/` 下的 FormRequest。
+- 表單驗證使用 `app/Http/Requests/` 下的 FormRequest（模組的放在模組內 `Http/Requests/`）。
+- `profile` 模組透過 HTTP Kernel 的 `appendMiddlewareToGroup()` 把 `EnsureProfileCompleted` 加到 `web` middleware 群組（不要改用 Router 的 `pushMiddlewareToGroup()`，Kernel 重新同步群組時會被蓋掉）：已登入但未完成首次設定（`users.onboarded_at` 為空）的使用者，所有頁面都會被導向 `/onboarding`。新增「未完成設定也要能進入」的路由時，把路由名稱加到 `config('fitness.profile.onboarding_except_routes')`。測試用的 `UserFactory` 預設為已完成設定，要測未完成狀態用 `->notOnboarded()`。
 
 ### 前端結構（`resources/js`，alias `@` → `resources/js`）
-- `pages/`：Inertia 頁面（`auth/`、`settings/`、`Dashboard.vue`、`Welcome.vue`）。
+- `pages/`：Inertia 頁面（`auth/`、`settings/`、`profile/`、`daily-summary/`、`ComingSoon.vue`）。
+- 業務模組：`profile`（首次設定、BMR／每日目標、體重紀錄）、`daily-summary`（今日頁；發出收集型事件 `DailySummaryCollecting`，各模組以 listener `addSection()` 加入當日摘要，前端依 `sections.<key>` 顯示）。
 - `layouts/`：頁面以 `AppLayout`（內部委派給 `layouts/app/AppSidebarLayout` 或 `AppHeaderLayout`）或 `AuthLayout`（委派給 `layouts/auth/*`）包裝；設定頁再套 `layouts/settings/Layout.vue`。切換整站版型時改這兩個入口檔即可。
-- `components/`：應用元件（側欄、導覽、使用者選單等）；側欄導覽項目定義在 `AppSidebar.vue`。
+- `components/`：應用元件。版型：手機（< 768px）用 `AppBottomNav.vue` 底部 Tab，桌機用 `AppSidebar.vue` 側欄；`QuickAddDialog.vue`（＋選單）、`profile/WeightLogSheet.vue`、`AppToast.vue` 掛在 `layouts/app/AppSidebarLayout.vue`，開關狀態在 `composables/useQuickActions.ts`、`useToast.ts`。`ResponsiveDialog.vue` 手機為底部面板、桌機為置中對話框；`AppPage.vue` 是頁面標題＋內容容器。模組元件放 `components/<module>/`，型別放 `types/<module>.ts`。
+- 品牌色：橘色，`resources/css/app.css` 的 `--primary`（shadcn 預設按鈕即為橘色）、`--brand-soft`（選取狀態淺底，Tailwind `bg-brand-soft`）、`--page`（頁面底色，`bg-page`）。設計定稿在 `vibe-coding/ui/features/m1-account/`。
+- BMR／每日目標的前端即時預覽在 `composables/useEnergyTargets.ts`，係數由後端 props（`options.calculation`）帶入，公式要與後端 `EnergyTargetCalculator` 保持一致。
+- PWA：`public/manifest.webmanifest`、`public/sw.js`（頁面不快取、`/build/` 快取、離線顯示 `public/offline.html`）、`public/icons/`；service worker 只在正式建置註冊（`app.ts`）。改快取策略時調整 `sw.js` 的 `CACHE_VERSION`。
 - `components/ui/`：shadcn-vue 產生的元件，每個元件資料夾有 `index.ts` 匯出；`lib/utils.ts` 提供 `cn()`（clsx + tailwind-merge）。
 - `composables/useAppearance.ts`：淺色/深色/系統主題，於 `app.ts` 呼叫 `initializeTheme()`。
 - 前端用 Ziggy 的 `route('name')` 產生網址（`ZiggyVue` 已全域註冊）。
@@ -53,6 +69,20 @@ CI（`.github/workflows/`）在 push/PR 到 `main`、`develop` 時執行：Pint 
 ### 程式風格
 - Prettier：4 空白縮排、單引號、行寬 150，含 organize-imports 與 tailwindcss 外掛（自動排序 import 與 class）。
 - `components.json` 中 shadcn-vue 的 alias 寫的是 `resources/js/Components`（大寫 C），實際目錄為小寫 `components`；用 shadcn-vue CLI 新增元件後需確認放到正確位置。
+
+### 模組化寫作規則
+
+業務功能一律以模組開發，完整規範與範例見 [vibe-coding/coding-style.md](vibe-coding/coding-style.md)，撰寫程式前必讀。重點：
+
+- **模組位置**：`packages/fitness/<module>/`（kebab-case），命名空間 `Fitness\<Module>`；`src/` 放程式、`tests/` 放該模組測試。`app/` 只放跨模組共用程式。
+- **註冊**：新增模組時同步更新根目錄 `composer.json` 的 psr-4（含 tests 的 autoload-dev）與 `bootstrap/providers.php`。
+- **Service Provider**：`boot()` 依序呼叫 `setupConfig` / `bindInstances` / `registerSingletons` / `setupLang` / `setupMigrations` / `setupRoutes` / `setupEvents`，一個掛載點一個方法。
+- **設定集中**：模組設定檔 `src/config/fitness/<module>.php`，以 `binds`（Repository 介面 → 實作）與 `singletons`（Manager）陣列宣告容器綁定；可調整數值走 `env()` → 設定檔。
+- **Repository**：資料存取一律透過 `Repositories/Contracts/` 介面，以 `app(介面::class)` 取得；跨模組只用對方的 Repository 介面或事件，不直接查對方資料表。
+- **Driver 模式**：同一件事有多種實作時，拆成「核心模組（Contract + abstract 基底 + Manager + helper）」與「driver 模組（`<核心>-<實作>`，只綁定 `fitness.<module>.<driver>`）」。
+- **事件驅動擴充**：模組間以事件溝通，發出方不依賴監聽方；擴充功能優先新增 listener，而非修改核心模組。收集型事件以 `addXxx()` / `getXxx()` 讓其他模組加入資料。
+- **歸屬**：migration、語系（`lang/zh_TW`，以 `Fitness<Module>::` 取用）、路由（名稱 `fitness.<module>.<action>`）、Exception（每種失敗一個類別）都放在擁有它的模組內。
+- **前端**：頁面放 `resources/js/pages/<module>/`，模組元件放 `components/<module>/`，型別放 `types/<module>.ts`。
 
 # USER GUIDE
 
@@ -90,6 +120,14 @@ CI（`.github/workflows/`）在 push/PR 到 `main`、`develop` 時執行：Pint 
   - 步驟定義以一個段落為主（請與使用者討論拆分方向後決定）
 - 每一份 milestone 依照每一項 Task 依序進行，每執行完一步，詢問使用者是否進行下一步 Task。
 - handoff 記錄這次改動的進度交接，下次開始 session 時參考。
+
+### 分支流程（一個 milestone 一個分支）
+
+- 每份 milestone 開始實作前，從最新的 `main` 開一個分支，名稱與 milestone 檔名對應：`milestone/<milestone 檔名>`（例如 `milestone/M1-account-foundation`）。
+- 該 milestone 的所有 Task 都在這個分支上 commit；milestone 與 handoff 檔內記錄對應的分支名稱。
+- 開始 session 時先確認目前分支與進行中的 milestone 相符，不在 `main` 上直接開發。
+- milestone 全部 Task 完成後，push 分支並開 PR 合回 `main`（讓 CI 的 Pint、Prettier、ESLint、PHPUnit 在合併前執行），以 merge commit（`--no-ff`）合併，不用 squash，保留每個 milestone 的起訖節點。
+- 合併後，下一份 milestone 再從更新後的 `main` 開新分支。
 
 ### 測試情境紀錄（`vibe-coding/tests/`）
 

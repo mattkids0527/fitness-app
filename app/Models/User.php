@@ -44,6 +44,11 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'birth_date' => 'date:Y-m-d',
+            'height_cm' => 'float',
+            'goal_rate_kg_per_week' => 'float',
+            'bmr_override' => 'integer',
+            'onboarded_at' => 'datetime',
         ];
     }
 }
