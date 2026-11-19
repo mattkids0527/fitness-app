@@ -3,7 +3,7 @@
 - 更新日期：2026-11-19
 - 對應任務：[M1 帳號基礎](../milestones/M1-account-foundation.md)
 - 分支：`milestone/M1-account-foundation`（M1 全部完成後開 PR 合回 `main`）
-- 目前進度：T1 環境 已完成，下一步 T2 模組基礎建設
+- 目前進度：T1、T2 已完成，下一步 T3 profile 後端
 
 ## ⚠️ 特別注意：T1 環境與本地開發需多一步驟
 
@@ -31,7 +31,16 @@ docker compose up -d
 - `lang/zh_TW/`：auth、pagination、passwords、validation（鍵值與框架英文版逐一比對，無缺漏）；`validation.attributes` 只放 starter kit 共用欄位，模組欄位放各模組語系檔。
 - `CLAUDE.md`：更新資料庫、測試與 docker 說明。
 
-## 驗證結果
+## T2 改動摘要
+
+- `packages/fitness/profile/`：`composer.json`、`README.md`、`src/ProfileServiceProvider.php`（setupConfig / bindInstances / registerSingletons / setupLang / setupRoutes）、`src/config/fitness/profile.php`（`binds`、`singletons` 皆為空）、`src/lang/zh_TW/messages.php`、`src/routes/web.php`（`web` + `auth` middleware，名稱前綴 `fitness.profile.`，目前無路由）。
+- 根目錄 `composer.json`：psr-4 `Fitness\Profile\`、autoload-dev `Fitness\Profile\Tests\`。
+- `bootstrap/providers.php`：註冊 `ProfileServiceProvider`。
+- `phpunit.xml`：Unit / Feature testsuite 加 `packages/fitness/*/tests/...`，source 加 `packages/fitness/*/src`。
+- Provider 尚無 `setupMigrations` / `setupEvents`，等 T3 有 migration、事件時再加（寫作規範：沒用到的掛載點不寫）。
+- 驗證方式：暫時加一條路由與兩支空測試，確認 `route:list` 看得到 `fitness.profile.*`、`config('fitness.profile')` 與 `FitnessProfile::` 語系可取得、phpunit 掃到模組 Unit / Feature 測試（29 tests 通過），之後已移除。
+
+## T1 驗證結果
 
 - `php artisan migrate:fresh` 在 PostgreSQL 成功。
 - `./vendor/bin/phpunit`：27 tests / 64 assertions 全部通過（跑在 `fitness_app_testing`）。
@@ -44,4 +53,5 @@ docker compose up -d
 | 日期 | Task | 內容 |
 |---|---|---|
 | 2026-11-19 | T1 | 完成：PostgreSQL、語系 zh_TW、時區 Asia/Taipei |
+| 2026-11-19 | T2 | 完成：profile 模組骨架與註冊 |
 | 2026-11-19 | — | 確立分支流程：一個 milestone 一個分支，完成後 PR 合回 `main`（見 CLAUDE.md「分支流程」） |

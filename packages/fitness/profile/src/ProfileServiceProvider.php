@@ -1,0 +1,67 @@
+<?php
+
+namespace Fitness\Profile;
+
+use Illuminate\Support\ServiceProvider;
+
+/**
+ * profile 模組的進入點，於 bootstrap/providers.php 註冊後掛載設定、容器綁定、語系與路由。
+ */
+class ProfileServiceProvider extends ServiceProvider
+{
+    /**
+     * 掛載模組的設定、容器綁定、語系與路由。
+     */
+    public function boot(): void
+    {
+        $this->setupConfig();
+        $this->bindInstances();
+        $this->registerSingletons();
+        $this->setupLang();
+        $this->setupRoutes();
+    }
+
+    /**
+     * 合併模組設定，讓 config('fitness.profile.*') 可用。
+     */
+    protected function setupConfig(): void
+    {
+        $this->mergeConfigFrom(__DIR__.'/config/fitness/profile.php', 'fitness.profile');
+    }
+
+    /**
+     * 依設定檔的 binds 綁定 Repository 介面與實作。
+     */
+    protected function bindInstances(): void
+    {
+        foreach (config('fitness.profile.binds', []) as $interface => $target) {
+            $this->app->bind($interface, $target);
+        }
+    }
+
+    /**
+     * 依設定檔的 singletons 註冊單例服務。
+     */
+    protected function registerSingletons(): void
+    {
+        foreach (config('fitness.profile.singletons', []) as $abstract => $class) {
+            $this->app->singleton($abstract, $class);
+        }
+    }
+
+    /**
+     * 載入模組語系，以 FitnessProfile:: 前綴取用。
+     */
+    protected function setupLang(): void
+    {
+        $this->loadTranslationsFrom(__DIR__.'/lang', 'FitnessProfile');
+    }
+
+    /**
+     * 載入模組路由。
+     */
+    protected function setupRoutes(): void
+    {
+        $this->loadRoutesFrom(__DIR__.'/routes/web.php');
+    }
+}
