@@ -12,7 +12,7 @@ use Fitness\Profile\Enums\Goal;
 trait HasProfileFormOptions
 {
     /**
-     * 性別、日常活動量、目標的選項，以及每週目標速度的允許範圍。
+     * 性別、日常活動量、目標的選項、每週目標速度的允許範圍，以及前端即時預覽 BMR／每日目標用的計算係數。
      *
      * @return array<string, mixed>
      */
@@ -23,6 +23,13 @@ trait HasProfileFormOptions
             'activity_levels' => ActivityLevel::options(),
             'goals' => Goal::options(),
             'goal_rate' => config('fitness.profile.goal_rate'),
+            'calculation' => [
+                'activity_factors' => config('fitness.profile.activity_factors'),
+                'kcal_per_kg' => config('fitness.profile.kcal_per_kg'),
+                'protein_g_per_kg' => config('fitness.profile.protein_g_per_kg'),
+                'calorie_floor' => config('fitness.profile.calorie_floor'),
+                'min_age' => config('fitness.profile.min_age'),
+            ],
         ];
     }
 }

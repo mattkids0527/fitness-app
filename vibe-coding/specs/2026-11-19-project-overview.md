@@ -56,7 +56,7 @@
 
 | 模組 | 職責 | 依賴 |
 |---|---|---|
-| `profile` | 首次設定、個人資料、BMR 計算、體重紀錄、每日熱量／營養目標計算 | — |
+| `profile` | 首次設定、個人資料、BMR 計算、體重紀錄、每日熱量／營養目標計算 | daily-summary（只監聽事件） |
 | `social-login` | 第三方帳號綁定／解綁／登入的共用流程、`social_accounts` 表、driver 合約 | profile |
 | `social-login-google` | Google driver（Socialite） | social-login |
 | `meal` | 餐點、食物項目、常用食物、照片儲存、分析結果確認流程 | profile |
@@ -64,7 +64,7 @@
 | `food-analyzer-gemini` | Gemini driver（Prism） | food-analyzer |
 | `exercise` | 健身項目、有氧／重訓紀錄、熱量計算 | profile |
 | `water` | 喝水紀錄與建議量 | profile |
-| `daily-summary` | 每日分析頁；發出收集型事件，由 meal / exercise / water 各自加入當日摘要 | profile |
+| `daily-summary` | 今日頁（每日分析）；發出收集型事件，由 profile / meal / exercise / water 各自加入當日摘要（M1 先建骨架） | — |
 
 ## 3. 功能模組
 

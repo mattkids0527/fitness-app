@@ -17,7 +17,16 @@ final class EnergyTargets
         public readonly int $calorieAdjustment,
         public readonly int $calorieTarget,
         public readonly int $proteinTargetG,
+        public readonly int $calorieFloor,
     ) {}
+
+    /**
+     * 每日熱量目標是否低於建議下限。
+     */
+    public function belowFloor(): bool
+    {
+        return $this->calorieTarget < $this->calorieFloor;
+    }
 
     /**
      * 轉成給前端的陣列。
@@ -36,6 +45,8 @@ final class EnergyTargets
             'calorie_adjustment' => $this->calorieAdjustment,
             'calorie_target' => $this->calorieTarget,
             'protein_target_g' => $this->proteinTargetG,
+            'calorie_floor' => $this->calorieFloor,
+            'below_floor' => $this->belowFloor(),
         ];
     }
 }

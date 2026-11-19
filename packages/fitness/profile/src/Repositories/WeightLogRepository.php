@@ -4,8 +4,8 @@ namespace Fitness\Profile\Repositories;
 
 use Fitness\Profile\Models\WeightLog;
 use Fitness\Profile\Repositories\Contracts\WeightLogRepository as WeightLogRepositoryContract;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 /**
  * 以 Eloquent 讀寫 weight_logs。
@@ -33,11 +33,11 @@ class WeightLogRepository implements WeightLogRepositoryContract
     }
 
     /**
-     * 分頁列出使用者的紀錄，新的在前。
+     * 取得使用者最新的 N 筆紀錄，新的在前。
      */
-    public function paginateForUser(int $userId, int $perPage): LengthAwarePaginator
+    public function latestManyForUser(int $userId, int $limit): Collection
     {
-        return $this->newestFirst($userId)->paginate($perPage);
+        return $this->newestFirst($userId)->limit($limit)->get()->toBase();
     }
 
     /**

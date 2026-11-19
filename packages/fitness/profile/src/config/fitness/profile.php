@@ -63,7 +63,15 @@ return [
     ],
 
     /*
-    | 體重紀錄列表每頁筆數。
+    | 每日熱量目標的建議下限（kcal），依性別；低於時前端只提醒、不阻擋儲存。
+    */
+    'calorie_floor' => [
+        'male' => env('PROFILE_CALORIE_FLOOR_MALE', 1500),
+        'female' => env('PROFILE_CALORIE_FLOOR_FEMALE', 1200),
+    ],
+
+    /*
+    | 體重紀錄列表每次載入的筆數（「載入更多」一次多載入這麼多筆）。
     */
     'weight_logs_per_page' => 20,
 

@@ -4,7 +4,7 @@ namespace Fitness\Profile\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use Fitness\Profile\Http\Requests\WeightLogStoreRequest;
-use Fitness\Profile\Repositories\Contracts\WeightLogRepository;
+use Fitness\Profile\Services\UserCalendar;
 use Fitness\Profile\Services\WeightLogService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,12 +17,17 @@ use Inertia\Response;
 class WeightLogController extends Controller
 {
     /**
-     * 分頁列出體重紀錄，新的在前。
+     * 列出最新的體重紀錄；?page=N 表示顯示前 N 批（「載入更多」時 N 加一）。
      */
-    public function index(Request $request, WeightLogRepository $weightLogs): Response
+    public function index(Request $request, WeightLogService $weightLogs): Response
     {
+        $page = max(1, (int) $request->query('page', 1));
+        $perPage = (int) config('fitness.profile.weight_logs_per_page');
+
         return Inertia::render('profile/WeightLogs', [
-            'weightLogs' => $weightLogs->paginateForUser($request->user()->id, config('fitness.profile.weight_logs_per_page')),
+            'history' => $weightLogs->history($request->user(), $perPage * $page),
+            'page' => $page,
+            'today' => UserCalendar::today($request->user())->toDateString(),
         ]);
     }
 

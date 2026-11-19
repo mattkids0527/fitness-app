@@ -2,8 +2,11 @@
 
 namespace Fitness\Profile;
 
+use Fitness\DailySummary\Events\DailySummaryCollecting;
 use Fitness\Profile\Http\Middleware\EnsureProfileCompleted;
+use Fitness\Profile\Listeners\AddProfileDailySummary;
 use Illuminate\Routing\Router;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -12,7 +15,7 @@ use Illuminate\Support\ServiceProvider;
 class ProfileServiceProvider extends ServiceProvider
 {
     /**
-     * 掛載模組的設定、容器綁定、語系、migration、路由與 middleware。
+     * 掛載模組的設定、容器綁定、語系、migration、路由、middleware 與事件。
      */
     public function boot(): void
     {
@@ -23,6 +26,7 @@ class ProfileServiceProvider extends ServiceProvider
         $this->setupMigrations();
         $this->setupRoutes();
         $this->setupMiddleware();
+        $this->setupEvents();
     }
 
     /**
@@ -83,5 +87,13 @@ class ProfileServiceProvider extends ServiceProvider
     protected function setupMiddleware(): void
     {
         $this->app->make(Router::class)->pushMiddlewareToGroup('web', EnsureProfileCompleted::class);
+    }
+
+    /**
+     * 註冊此模組監聽的事件：今日頁收集摘要時加入目標與體重。
+     */
+    protected function setupEvents(): void
+    {
+        Event::listen(DailySummaryCollecting::class, AddProfileDailySummary::class);
     }
 }

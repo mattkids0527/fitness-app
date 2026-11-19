@@ -15,6 +15,7 @@ Route::middleware(['web', 'auth'])
         Route::post('onboarding', [OnboardingController::class, 'store'])->name('onboarding.store');
 
         Route::get('me', [ProfileController::class, 'show'])->name('show');
+        Route::get('me/edit', [ProfileController::class, 'edit'])->name('edit');
         Route::put('me', [ProfileController::class, 'update'])->name('update');
 
         Route::get('me/weight-logs', [WeightLogController::class, 'index'])->name('weight_logs.index');

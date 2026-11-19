@@ -3,7 +3,7 @@
 namespace Fitness\Profile\Repositories\Contracts;
 
 use Fitness\Profile\Models\WeightLog;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 /**
  * 體重紀錄的存取介面；所有查詢都限定在指定使用者底下。
@@ -21,9 +21,11 @@ interface WeightLogRepository
     public function latestForUser(int $userId): ?WeightLog;
 
     /**
-     * 分頁列出使用者的紀錄，新的在前。
+     * 取得使用者最新的 N 筆紀錄，新的在前。
+     *
+     * @return Collection<int, WeightLog>
      */
-    public function paginateForUser(int $userId, int $perPage): LengthAwarePaginator;
+    public function latestManyForUser(int $userId, int $limit): Collection;
 
     /**
      * 取得使用者自己的某筆紀錄，不屬於該使用者時丟 ModelNotFoundException。

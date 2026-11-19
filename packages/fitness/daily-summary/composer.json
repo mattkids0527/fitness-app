@@ -1,0 +1,20 @@
+{
+    "name": "fitness/daily-summary",
+    "description": "今日頁（每日分析）：以收集型事件讓各模組加入當日摘要",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.2",
+        "laravel/framework": "^12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Fitness\\DailySummary\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Fitness\\DailySummary\\Tests\\": "tests/"
+        }
+    }
+}

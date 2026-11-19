@@ -44,7 +44,7 @@ class EnergyTargetCalculator
     }
 
     /**
-     * 計算目標：BMR（手動值優先）× 活動係數 = 日常消耗，再依目標加減熱量；蛋白質 = 體重 × 目標係數。
+     * 計算目標：BMR（手動值優先）× 活動係數 = 日常消耗，再依目標加減熱量；蛋白質 = 體重 × 目標係數；並附上依性別的熱量下限。
      */
     public function calculate(
         Gender $gender,
@@ -71,6 +71,7 @@ class EnergyTargetCalculator
             calorieAdjustment: $adjustment,
             calorieTarget: $tdee + $adjustment,
             proteinTargetG: (int) round($weightKg * $goal->proteinGramsPerKg()),
+            calorieFloor: (int) config('fitness.profile.calorie_floor.'.$gender->value),
         );
     }
 
