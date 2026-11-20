@@ -40,3 +40,12 @@ export function shortDate(iso: string, today?: string): string {
 
     return `${m}/${d}（${weekday(iso)}）`;
 }
+
+/**
+ * 日期（YYYY-MM-DD）加減天數。
+ */
+export function addDays(iso: string, days: number): string {
+    const [y, m, d] = iso.split('-').map(Number);
+
+    return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
