@@ -4,15 +4,20 @@
 #
 # 在全新的 Ubuntu 22.04 / 24.04（GCP e2-micro）上以 root 執行一次，安裝並設定：
 # swap、時區、nginx、PHP-FPM、PostgreSQL、Composer、deploy 帳號、SSH 強化、ufw、fail2ban、自動安全性更新、
-# 資料庫每日備份，並建立部署目錄與正式環境 .env 範本。可重複執行：已完成的步驟會略過，設定檔會以最新內容覆寫。
+# 資料庫每日備份、Cloudflare Tunnel（cloudflared），並建立部署目錄與正式環境 .env 範本。
+# 可重複執行：已完成的步驟會略過，設定檔會以最新內容覆寫。
+#
+# 網站流量只經由 Cloudflare Tunnel 進來：nginx 只聽 127.0.0.1:80，防火牆只開 SSH。
 #
 # 用法（在 VM 上）：
 #   sudo DEPLOY_PUBKEY="ssh-ed25519 AAAA... fitness-deploy" bash provision.sh
+#   （執行中會詢問 Cloudflare Tunnel token，貼上後不會顯示在畫面上，也不會留在 shell 歷史紀錄）
 #
 # 可用環境變數：
-#   DEPLOY_PUBKEY  必填（第一次）。部署用公鑰，GitHub Actions 與本地 Deployer 以對應私鑰登入 deploy 帳號
-#   APP_URL        選填。預設 http://<GCP 外部 IP>（從 metadata server 取得）
-#   DB_PASSWORD    選填。資料庫密碼，預設自動產生；資料庫帳號已存在時不會變更密碼
+#   DEPLOY_PUBKEY            必填（第一次）。部署用公鑰，GitHub Actions 與本地 Deployer 以對應私鑰登入 deploy 帳號
+#   CLOUDFLARE_TUNNEL_TOKEN  選填。不提供時會互動詢問；留空則只安裝 cloudflared、不註冊服務
+#   APP_DOMAIN               選填。網站網域，預設 wn52777.com
+#   DB_PASSWORD              選填。資料庫密碼，預設自動產生；資料庫帳號已存在時不會變更密碼
 #
 set -euo pipefail
 
@@ -32,8 +37,9 @@ BACKUP_DIR="/var/backups/${APP_NAME}"
 BACKUP_KEEP="7"
 BACKUP_SCRIPT="/usr/local/bin/${APP_NAME}-backup"
 
+APP_DOMAIN="${APP_DOMAIN:-wn52777.com}"
 DEPLOY_PUBKEY="${DEPLOY_PUBKEY:-}"
-APP_URL="${APP_URL:-}"
+CLOUDFLARE_TUNNEL_TOKEN="${CLOUDFLARE_TUNNEL_TOKEN:-}"
 DB_PASSWORD="${DB_PASSWORD:-}"
 
 export DEBIAN_FRONTEND=noninteractive
@@ -255,7 +261,7 @@ EOF
     svc reload ssh
 }
 
-# 防火牆只開 SSH、HTTP、HTTPS，並啟用 fail2ban 防 SSH 暴力破解
+# 防火牆只開 SSH（網站流量走 Cloudflare Tunnel），並啟用 fail2ban 防 SSH 暴力破解
 setup_firewall() {
     step "設定 ufw 與 fail2ban"
     apt_install ufw fail2ban python3-systemd
@@ -269,8 +275,9 @@ bantime  = 1h
 EOF
     if has_systemd; then
         ufw allow OpenSSH >/dev/null
-        ufw allow 80/tcp >/dev/null
-        ufw allow 443/tcp >/dev/null
+        # 網站流量走 Cloudflare Tunnel（由 VM 主動連出），80／443 不對外開放；移除舊版腳本開過的規則
+        ufw delete allow 80/tcp >/dev/null 2>&1 || true
+        ufw delete allow 443/tcp >/dev/null 2>&1 || true
         ufw --force enable >/dev/null
         ufw status | sed 's/^/    /'
     else
@@ -433,21 +440,37 @@ CRON
     info "備份目錄 ${BACKUP_DIR}，手動備份：sudo -u postgres ${BACKUP_SCRIPT}"
 }
 
-# 設定 nginx：root 指向 current/public，/build/ 長效快取，開 gzip
+# 設定 nginx：只聽 127.0.0.1 給 cloudflared 轉入，root 指向 current/public，/build/ 長效快取，開 gzip
 configure_nginx() {
-    step "設定 nginx"
+    step "設定 nginx（${APP_DOMAIN}）"
     cat >/etc/nginx/sites-available/${APP_NAME} <<EOF
-# Fitness App（階段 A：以 IP + HTTP 提供服務；買網域後改 server_name 並加上 HTTPS）
+# Fitness App：只接受本機 cloudflared 轉進來的連線（HTTPS 由 Cloudflare 處理）
+
+# www 一律轉向不含 www 的網址
 server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
-    server_name _;
+    listen 127.0.0.1:80;
+    server_name www.${APP_DOMAIN};
+    return 301 https://${APP_DOMAIN}\$request_uri;
+}
+
+server {
+    listen 127.0.0.1:80 default_server;
+    server_name ${APP_DOMAIN};
 
     root ${DEPLOY_PATH}/current/public;
     index index.php;
     charset utf-8;
     client_max_body_size 12M;
     server_tokens off;
+
+    # 連線都來自本機的 cloudflared，改用 Cloudflare 提供的使用者真實 IP（登入次數限制、log 才會正確）
+    set_real_ip_from 127.0.0.1;
+    real_ip_header CF-Connecting-IP;
+
+    # 使用者用 http 連到 Cloudflare 時轉向 https（Cloudflare 的 Always Use HTTPS 沒開時的保險）
+    if (\$http_x_forwarded_proto = "http") {
+        return 301 https://\$host\$request_uri;
+    }
 
     gzip_vary on;
     gzip_proxied any;
@@ -463,7 +486,7 @@ server {
         try_files \$uri \$uri/ /index.php?\$query_string;
     }
 
-    # Vite 產生的檔名含 hash，可以長期快取
+    # Vite 產生的檔名含 hash，可以長期快取（Cloudflare 邊緣節點也會依此快取）
     location /build/ {
         expires max;
         add_header Cache-Control "public, immutable";
@@ -487,6 +510,9 @@ server {
         # 部署以 symlink 切換版本，必須用 realpath 才會指到新版本
         fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
         fastcgi_param DOCUMENT_ROOT \$realpath_root;
+        # 使用者到 Cloudflare 一律是 HTTPS：讓 Laravel 產生 https 網址、secure cookie 與正確的 OAuth redirect URI
+        fastcgi_param HTTPS on;
+        fastcgi_param SERVER_PORT 443;
         fastcgi_hide_header X-Powered-By;
     }
 
@@ -502,20 +528,41 @@ EOF
     svc reload nginx || svc restart nginx
 }
 
-# 取得對外網址：優先使用 APP_URL，其次 GCP metadata 的外部 IP
-resolve_app_url() {
-    if [ -n "$APP_URL" ]; then
+# 安裝 cloudflared，並以 Tunnel token 註冊成系統服務（token 不提供時互動詢問，可留空稍後再設定）
+setup_cloudflared() {
+    step "設定 Cloudflare Tunnel"
+    if [ ! -f /usr/share/keyrings/cloudflare-main.gpg ]; then
+        install -d -m 755 /usr/share/keyrings
+        curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg -o /usr/share/keyrings/cloudflare-main.gpg
+    fi
+    if [ ! -f /etc/apt/sources.list.d/cloudflared.list ]; then
+        echo 'deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main' \
+            >/etc/apt/sources.list.d/cloudflared.list
+        apt-get update -y
+    fi
+    apt_install cloudflared
+    info "$(cloudflared --version 2>/dev/null | head -n1)"
+
+    if [ -f /etc/systemd/system/cloudflared.service ]; then
+        info "cloudflared 服務已註冊，略過（要換 token 請先執行 sudo cloudflared service uninstall）"
+        svc enable --now cloudflared
         return
     fi
-    local ip
-    ip="$(curl -fs -m 3 -H 'Metadata-Flavor: Google' \
-        http://metadata.google.internal/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip || true)"
-    if [ -n "$ip" ]; then
-        APP_URL="http://${ip}"
-    else
-        APP_URL="http://localhost"
-        info "取不到 GCP 外部 IP，APP_URL 暫設為 ${APP_URL}，請之後手動修改 .env"
+    if [ -z "$CLOUDFLARE_TUNNEL_TOKEN" ] && [ -t 0 ]; then
+        printf '    請貼上 Cloudflare Tunnel token（輸入時不會顯示；直接按 Enter 可略過）：'
+        read -rs CLOUDFLARE_TUNNEL_TOKEN
+        echo
     fi
+    if [ -z "$CLOUDFLARE_TUNNEL_TOKEN" ]; then
+        info "沒有提供 token，略過註冊；之後可重跑本腳本，或執行 sudo cloudflared service install <token>"
+        return
+    fi
+    if ! has_systemd; then
+        info "（沒有 systemd，略過 cloudflared service install）"
+        return
+    fi
+    cloudflared service install "$CLOUDFLARE_TUNNEL_TOKEN"
+    info "cloudflared 服務已註冊並啟動"
 }
 
 # 建立 Deployer 的部署目錄，第一次執行時產生正式環境 .env（之後不覆寫）
@@ -531,14 +578,13 @@ setup_app_directory() {
     if [ -z "$DB_PASSWORD" ]; then
         info "資料庫帳號原本就存在，無法得知密碼：請手動在 .env 填入 DB_PASSWORD"
     fi
-    resolve_app_url
 
     cat >"$env_file" <<EOF
 APP_NAME=Fitness
 APP_ENV=production
 APP_KEY=base64:$(openssl rand -base64 32)
 APP_DEBUG=false
-APP_URL=${APP_URL}
+APP_URL=https://${APP_DOMAIN}
 
 APP_LOCALE=zh_TW
 APP_FALLBACK_LOCALE=en
@@ -568,8 +614,8 @@ SESSION_LIFETIME=120
 SESSION_ENCRYPT=false
 SESSION_PATH=/
 SESSION_DOMAIN=null
-# 改成 HTTPS 後設為 true
-SESSION_SECURE_COOKIE=false
+# 經由 Cloudflare 一律是 HTTPS，cookie 只在 HTTPS 傳送
+SESSION_SECURE_COOKIE=true
 
 BROADCAST_CONNECTION=log
 FILESYSTEM_DISK=local
@@ -584,7 +630,7 @@ MAIL_FROM_NAME="\${APP_NAME}"
 
 SOCIAL_LOGIN_PROVIDERS=google
 
-# 需要網域 + HTTPS 才能設定（Google 不接受 IP 當 redirect URI）；沒填時登入頁不顯示 Google 按鈕
+# 正式環境專用的 OAuth 用戶端，redirect URI 為 https://${APP_DOMAIN}/auth/google/callback；沒填時登入頁不顯示 Google 按鈕
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GOOGLE_REDIRECT_URI="\${APP_URL}/auth/google/callback"
@@ -594,11 +640,17 @@ EOF
     info "已產生 ${env_file}"
 }
 
-# 印出接下來要手動完成的事項
+# 印出接下來要手動完成的事項與目前的 Tunnel 狀態
 print_summary() {
     local home="/home/${DEPLOY_USER}"
+    local tunnel="未註冊（重跑本腳本並貼上 token）"
+    if has_systemd && systemctl is-active --quiet cloudflared 2>/dev/null; then
+        tunnel="執行中"
+    fi
     step "完成"
     cat <<EOF
+    Cloudflare Tunnel：${tunnel}
+
     接下來請完成：
 
     1. 把下面這把公鑰加到 GitHub repo → Settings → Deploy keys（Allow write access 不要勾）：
@@ -607,11 +659,11 @@ print_summary() {
 
     2. 用部署用私鑰測試登入 deploy 帳號（在你的電腦上執行）：
 
-       ssh -i ~/.ssh/fitness_deploy ${DEPLOY_USER}@<VM 外部 IP>
+       ssh -i ~/.ssh/fitness_deploy ${DEPLOY_USER}@<VM 靜態 IP>
 
     3. 確認正式環境設定：sudo -u ${DEPLOY_USER} nano ${DEPLOY_PATH}/shared/.env
 
-    目前還沒部署程式，瀏覽 http://<VM 外部 IP> 會看到 nginx 的 404，這是正常的。
+    目前還沒部署程式，瀏覽 https://${APP_DOMAIN} 會看到 nginx 的 404，這是正常的。
 EOF
 }
 
@@ -636,6 +688,7 @@ main() {
     configure_postgres
     setup_backup
     configure_nginx
+    setup_cloudflared
     setup_app_directory
     print_summary
 }

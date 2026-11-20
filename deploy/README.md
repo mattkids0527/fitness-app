@@ -1,18 +1,29 @@
-# 部署（GCP VM）
+# 部署（GCP VM + Cloudflare Tunnel）
 
-正式環境部署在 GCP 免費額度的 e2-micro VM。規格見 [D1 GCP 部署與 CI/CD 規格](../vibe-coding/specs/2026-11-20-d1-gcp-deployment.md)。
+正式環境部署在 GCP 免費額度的 e2-micro VM，網址是 **https://wn52777.com**。規格見 [D1 GCP 部署與 CI/CD 規格](../vibe-coding/specs/2026-11-20-d1-gcp-deployment.md)。
 
 | 檔案 | 用途 |
 |---|---|
-| `provision.sh` | VM 初始化腳本：在全新的 Ubuntu 上執行一次，安裝並設定整個執行環境，包含資料庫每日備份 |
+| `provision.sh` | VM 初始化腳本：在全新的 Ubuntu 上執行一次，安裝並設定整個執行環境，包含資料庫每日備份與 Cloudflare Tunnel |
 
-目前是**階段 A**：用 `http://<靜態 IP>` 上線。Google 登入與 PWA 安裝要等有網域、改成 HTTPS 後才能使用。
+```
+使用者 ──HTTPS──▶ Cloudflare（憑證、快取、DDoS 防護）
+                        │  Tunnel（由 VM 主動連出去）
+                        ▼
+VM：cloudflared ──HTTP──▶ nginx（只聽 127.0.0.1:80）──▶ PHP-FPM ──▶ PostgreSQL
+```
+
+- 網站流量只經由 Cloudflare Tunnel 進來，VM 不開放 80／443。
+- 部署用的 SSH（22 port）直連 VM 的靜態 IP。
 
 ---
 
 ## 1. 在你的電腦上產生部署用金鑰
 
-這把金鑰讓本地的 Deployer 和 GitHub Actions 登入 VM 的 `deploy` 帳號。它是部署專用的新金鑰，不要用平常登入的那把。私鑰之後會放進 GitHub Secrets，所以不設密碼。
+這把金鑰讓本地的 Deployer 和 GitHub Actions 登入 VM 的 `deploy` 帳號。
+
+- 它是部署專用的新金鑰，不要用平常登入的那把。
+- 私鑰之後會放進 GitHub Secrets，所以不設密碼。
 
 ```bash
 ssh-keygen -t ed25519 -f ~/.ssh/fitness_deploy -C fitness-deploy -N ""
@@ -35,25 +46,65 @@ ssh-keygen -t ed25519 -f ~/.ssh/fitness_deploy -C fitness-deploy -N ""
 | 開機磁碟 → 作業系統 | **Ubuntu 24.04 LTS**（x86/64） | 腳本只支援 22.04／24.04。**不要選 26.04**，PHP 8.4 的套件庫還沒支援 |
 | 開機磁碟 → 類型 | **標準永久磁碟**（Standard persistent disk） | 預設是「平衡型」，**不在免費額度內**，一定要改 |
 | 開機磁碟 → 大小 | 30 GB | 免費額度上限 |
-| 防火牆 | 勾選「允許 HTTP 流量」「允許 HTTPS 流量」 | SSH（22）由 GCP 預設的 `default-allow-ssh` 規則開放 |
+| 防火牆 | 「允許 HTTP 流量」「允許 HTTPS 流量」**都不要勾** | 網站走 Cloudflare Tunnel；SSH（22）由 GCP 預設的 `default-allow-ssh` 規則開放 |
 | 資料保護 | 不要開啟快照排程 | 快照會另外收費；資料庫備份由 VM 上的 cron 處理 |
 | 觀測能力 | 不要安裝 Ops Agent | 會吃記憶體 |
+
+> **已經建好 VM 並勾了 HTTP／HTTPS？** 到 VM 詳細資料頁 → **編輯** → 網路的防火牆區塊，取消勾選「允許 HTTP 流量」「允許 HTTPS 流量」並儲存。不改也不會被連進來（VM 內的 ufw 只開 22，nginx 也只聽 127.0.0.1），但在 GCP 這層一起關掉比較乾淨。
 
 建立後，順便到 **帳單 → 預算與快訊** 設一個 US$1 的預算快訊。萬一有設定不在免費額度內，會馬上收到通知。
 
 ## 3. 外部 IP 改成靜態 IP
 
-VM 預設的外部 IP 是臨時的，停機再開機後可能會變。改成靜態 IP 後，Deployer、GitHub Secrets 和之後的網域都指向同一個位址。
+VM 預設的外部 IP 是臨時的，停機再開機後可能會變。網站流量走 Tunnel，不受 IP 影響；但 Deployer 和 GitHub Actions 要用 IP 連 SSH，所以還是要固定。
 
 到 **VPC 網路 → IP 位址**，找到 `fitness-app` 的外部 IP，按右邊的 **⋮ → 升級為靜態 IP 位址**，名稱填 `fitness-app-ip`。
 
 > GCP 對外部 IPv4 的計費規則調整過幾次，設好後隔天到帳單頁確認一下有沒有產生費用。
 
-## 4. 執行 `provision.sh`
+## 4. 建立 Cloudflare Tunnel 並設定網域
+
+在 Cloudflare 後台操作。Cloudflare 的介面名稱偶爾會調整，下面以目前的名稱為準。
+
+**1. 建立 Tunnel**
+
+1. 進入 **Zero Trust**（第一次進入會要求設定團隊名稱並選擇方案，選 **Free**）。
+2. 到 **Networks → Tunnels → Create a tunnel**，類型選 **Cloudflared**，名稱填 `fitness-app`。
+3. 安裝連接器的頁面會顯示一行 `cloudflared service install eyJhIjoi...` 的指令。**只複製 `eyJ` 開頭的那串 token**，等一下執行 `provision.sh` 時會用到。這一頁的安裝步驟不用照著做，腳本會處理。
+
+> token 等於這條 Tunnel 的鑰匙，不要貼到聊天、issue 或 git 裡。
+
+**2. 設定網域對應**（Public Hostname，新版介面可能叫 Published application routes）
+
+| Subdomain | Domain | Service |
+|---|---|---|
+| （空白） | `wn52777.com` | `HTTP` → `127.0.0.1:80` |
+| `www` | `wn52777.com` | `HTTP` → `127.0.0.1:80` |
+
+- Service 請填 `127.0.0.1:80`，不要填 `localhost`。`localhost` 可能會先嘗試 IPv6，但 nginx 只聽 IPv4。
+- 存檔後 Cloudflare 會自動建立 DNS 紀錄。如果顯示網域已經有 A 或 CNAME 紀錄而衝突，先到 **DNS → Records** 刪掉舊紀錄再存一次。
+- `www` 會由 nginx 轉向 `https://wn52777.com`。
+
+**3. 網域的 SSL 與效能設定**（回到一般的 Cloudflare 後台，選 `wn52777.com`）
+
+| 位置 | 設定 |
+|---|---|
+| SSL/TLS → Overview | 加密模式選 **Full** |
+| SSL/TLS → Edge Certificates | **Always Use HTTPS** 開啟 |
+| Speed → Optimization（或 Settings → Content Optimization） | **Rocket Loader** 關閉，它會改寫 `<script>`，可能讓 Vue 無法啟動 |
+
+快取不用另外設定：Cloudflare 會依照 nginx 給的 `Cache-Control` 決定，`/build/*` 長期快取，`sw.js`、manifest 和頁面都不快取。
+
+## 5. 執行 `provision.sh`
 
 **上傳腳本到 VM**，兩種方式擇一：
 
-- 在主控台的 VM 列表按 **SSH**，開啟瀏覽器版終端機，右上角 **上傳檔案** 選 `deploy/provision.sh`。
+- 在主控台的 VM 列表按 **SSH**，開啟瀏覽器版終端機，右上角 **上傳檔案** 選 `deploy/provision.sh`。腳本放在 WSL 裡的話，可以先複製到 Windows 的「下載」資料夾（`<使用者>` 換成你的 Windows 使用者名稱）：
+
+  ```bash
+  cp deploy/provision.sh /mnt/c/Users/<使用者>/Downloads/
+  ```
+
 - 或是在已安裝 gcloud CLI 的電腦上執行：
 
   ```bash
@@ -66,23 +117,27 @@ VM 預設的外部 IP 是臨時的，停機再開機後可能會變。改成靜�
 sudo DEPLOY_PUBKEY="ssh-ed25519 AAAA...（貼上公鑰）... fitness-deploy" bash provision.sh
 ```
 
+- 執行到「設定 Cloudflare Tunnel」時會要求貼上步驟 4 的 token。輸入時畫面不會顯示，貼上後按 Enter 即可。
+- 如果還沒建立 Tunnel，直接按 Enter 略過，之後再重跑一次腳本補上。
+
 大約 5～10 分鐘會跑完。腳本做的事：
 
 | 項目 | 內容 |
 |---|---|
 | 系統 | 2GB swap、時區 Asia/Taipei、每日自動安全性更新 |
-| 軟體 | nginx、PHP 8.4-FPM（含 OPcache）、PostgreSQL 16、Composer、git |
+| 軟體 | nginx、PHP 8.4-FPM（含 OPcache）、PostgreSQL 16、Composer、git、cloudflared |
 | 帳號 | `deploy`：只能用金鑰登入，sudo 只允許 `systemctl reload php8.4-fpm`；另外產生從 GitHub 拉程式碼用的 deploy key |
-| 安全性 | SSH 關閉密碼登入與 root 登入、ufw 只開 22／80／443、fail2ban（SSH 失敗 5 次封鎖 1 小時） |
+| 安全性 | SSH 關閉密碼登入與 root 登入、ufw 只開 22、fail2ban（SSH 失敗 5 次封鎖 1 小時） |
 | PHP-FPM | 以 `deploy` 身分執行，`pm = ondemand`，最多 4 個 worker |
 | PostgreSQL | 只聽 localhost，`shared_buffers = 128MB`、`max_connections = 20`；建立資料庫 `fitness_app` 和同名的帳號，密碼隨機產生 |
-| 備份 | 每天 03:00 備份資料庫到 `/var/backups/fitness-app/`，保留最近 7 份（見 [§6](#6-資料庫備份與還原)） |
-| nginx | root 指向 `/var/www/fitness-app/current/public`；`/build/` 長效快取；`sw.js`、manifest 不快取；開啟 gzip；擋掉隱藏檔與 `index.php` 以外的 `.php` |
-| 部署目錄 | `/var/www/fitness-app/shared/.env`：正式環境設定，`APP_KEY` 與資料庫密碼自動產生，`APP_URL` 自動帶入 VM 的外部 IP |
+| 備份 | 每天 03:00 備份資料庫到 `/var/backups/fitness-app/`，保留最近 7 份（見 [§7](#7-資料庫備份與還原)） |
+| nginx | 只聽 `127.0.0.1:80`，root 指向 `/var/www/fitness-app/current/public`。<br>傳給 PHP 時標記為 HTTPS，並改用 `CF-Connecting-IP` 作為使用者 IP（見規格 §3.3）。<br>`www` 與 `http` 轉向 `https://wn52777.com`。<br>`/build/` 長效快取；`sw.js`、manifest 不快取；開啟 gzip。<br>擋掉隱藏檔，以及 `index.php` 以外的 `.php` |
+| Tunnel | 安裝 `cloudflared`，用 token 註冊成系統服務 |
+| 部署目錄 | `/var/www/fitness-app/shared/.env`：正式環境設定，`APP_URL=https://wn52777.com`，`APP_KEY` 與資料庫密碼自動產生 |
 
-腳本可以重複執行。已安裝的套件、已存在的資料庫帳號，以及 `.env` 都不會被覆寫；nginx、PHP、PostgreSQL 的設定檔會更新成腳本裡的最新內容。
+腳本可以重複執行。已安裝的套件、已存在的資料庫帳號、已註冊的 Tunnel，以及 `.env` 都不會被覆寫；nginx、PHP、PostgreSQL 的設定檔會更新成腳本裡的最新內容。
 
-## 5. 跑完之後
+## 6. 跑完之後
 
 **1. 加入 GitHub Deploy key**
 
@@ -97,7 +152,7 @@ sudo cat /home/deploy/.ssh/id_ed25519.pub
 **2. 從你的電腦測試登入**
 
 ```bash
-ssh -i ~/.ssh/fitness_deploy deploy@<VM 外部 IP>
+ssh -i ~/.ssh/fitness_deploy deploy@<VM 靜態 IP>
 ```
 
 登入後確認 VM 可以連到 GitHub，看到 `Hi mattkids0527/fitness-app! You've successfully authenticated` 就代表成功：
@@ -106,19 +161,33 @@ ssh -i ~/.ssh/fitness_deploy deploy@<VM 外部 IP>
 ssh -T git@github.com
 ```
 
-**3. 檢查正式環境設定**
+**3. 確認網站連得到**
+
+- 用瀏覽器開 `https://wn52777.com`。看到 **404 Not Found** 是正常的，因為程式還沒部署，但已經代表 Cloudflare → Tunnel → nginx 整條路是通的。
+- Cloudflare Zero Trust 的 Tunnels 頁面，`fitness-app` 應該顯示 **HEALTHY**。
+- 直接開 `http://<VM 靜態 IP>` 應該**連不上**（逾時），代表 VM 沒有對外開放網站。
+
+**4. 檢查服務與備份**
+
+在瀏覽器版 SSH（你自己的帳號，有完整 sudo 權限）執行：
 
 ```bash
-nano /var/www/fitness-app/shared/.env
+swapon --show && sudo ufw status && systemctl is-active nginx php8.4-fpm postgresql fail2ban cron cloudflared
 ```
 
-確認 `APP_URL` 是 `http://<靜態 IP>`。如果是在步驟 3 改成靜態 IP **之前**就執行了腳本，這裡可能是舊的 IP，要手動改掉。
+```bash
+sudo -u postgres fitness-app-backup
+```
 
-**4. 確認 nginx 正常**
+**5. 檢查正式環境設定**
 
-用瀏覽器開 `http://<VM 外部 IP>`，看到 **404 Not Found** 是正常的，因為程式還沒部署，nginx 已經在回應。
+```bash
+sudo -u deploy nano /var/www/fitness-app/shared/.env
+```
 
-## 6. 資料庫備份與還原
+`APP_URL` 應該是 `https://wn52777.com`。Google 登入的憑證（`GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`）在第一次部署時再填。
+
+## 7. 資料庫備份與還原
 
 `provision.sh` 會安裝備份腳本 `/usr/local/bin/fitness-app-backup`，每天 03:00（台灣時間）由 cron 以 `postgres` 身分執行。
 
@@ -151,7 +220,7 @@ sudo -u postgres fitness-app-backup
 目前沒有異地備份，重要的時候可以手動下載一份。在你的電腦上執行：
 
 ```bash
-scp -i ~/.ssh/fitness_deploy "deploy@<VM 外部 IP>:/var/backups/fitness-app/*.dump" ./
+scp -i ~/.ssh/fitness_deploy "deploy@<VM 靜態 IP>:/var/backups/fitness-app/*.dump" ./
 ```
 
 ### 先還原到暫時的資料庫驗證
@@ -207,4 +276,9 @@ sudo -u postgres dropdb fitness_app_restore_test
 
 - **用 `deploy` 帳號登不進去**：主控台的瀏覽器版 SSH 是用 Google 自動產生的金鑰登入你自己的帳號，不受腳本「關閉密碼登入」的影響，可以先從那邊登入檢查 `/home/deploy/.ssh/authorized_keys`。腳本對 SSH 的設定都在 `/etc/ssh/sshd_config.d/99-fitness-app.conf`。
 - **自己的 IP 被 fail2ban 封鎖**：用主控台的瀏覽器版 SSH 登入，執行 `sudo fail2ban-client set sshd unbanip <你的 IP>`。
-- **查看服務狀態**：`systemctl status nginx php8.4-fpm postgresql`。nginx 的錯誤記錄在 `/var/log/nginx/error.log`。
+- **查看服務狀態**：`systemctl status nginx php8.4-fpm postgresql cloudflared`。nginx 的錯誤記錄在 `/var/log/nginx/error.log`。
+- **開網站出現 Cloudflare 的 502／1033 錯誤**：Tunnel 連不到 nginx。
+  - 先看 `systemctl status cloudflared`、`journalctl -u cloudflared -n 50`。
+  - 確認 Public Hostname 的 Service 是 `HTTP` → `127.0.0.1:80`。
+  - 在 VM 上用 `curl -H "Host: wn52777.com" http://127.0.0.1/` 測試 nginx 本身有沒有回應。
+- **要換 Tunnel token**：先執行 `sudo cloudflared service uninstall`，再重跑 `provision.sh` 貼上新的 token。
