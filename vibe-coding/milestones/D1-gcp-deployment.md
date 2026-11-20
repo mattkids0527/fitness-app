@@ -2,7 +2,7 @@
 
 - 狀態：進行中（2026-11-20 開始）
 - 建立日期：2026-11-20
-- 分支：`milestone/D1-gcp-deployment`（完成後開 PR 合回 `main`）
+- 分支：`develop`（2026-11-20 起改為 develop → main 流程，PR 由使用者合併；T1～T4 在 `milestone/D1-gcp-deployment` 完成，已快轉進 develop）
 - 依據規格：[D1 GCP 部署與 CI/CD 規格](../specs/2026-11-20-d1-gcp-deployment.md)
 
 ## 目標
