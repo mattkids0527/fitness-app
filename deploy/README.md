@@ -97,6 +97,7 @@ ssh-keygen -t ed25519 -f ~/.ssh/fitness_deploy -C fitness-deploy -N ""
 | `www` | `wn52777.com` | `HTTP` → `127.0.0.1:80` |
 
 - Service 請填 `127.0.0.1:80`，不要填 `localhost`。`localhost` 可能會先嘗試 IPv6，但 nginx 只聽 IPv4。
+- **不要自己到 DNS 新增 `A 127.0.0.1` 的紀錄。** `127.0.0.1:80` 只填在 Tunnel 的 Service 欄位，意思是「VM 上的 cloudflared 轉給同一台 VM 的 nginx」。DNS 紀錄由 Cloudflare 自動建立，是指向 `<tunnel-id>.cfargotunnel.com` 的 CNAME（橘色雲朵）。如果 DNS 裡寫的是 `127.0.0.1`，瀏覽器會去連你自己的電腦，網站會打不開。
 - 存檔後 Cloudflare 會自動建立 DNS 紀錄。如果顯示網域已經有 A 或 CNAME 紀錄而衝突，先到 **DNS → Records** 刪掉舊紀錄再存一次。
 - `www` 會由 nginx 轉向 `https://wn52777.com`。
 
@@ -170,11 +171,13 @@ sudo cat /home/deploy/.ssh/id_ed25519.pub
 ssh -i ~/.ssh/fitness_deploy deploy@<VM 外部 IP>
 ```
 
-登入後確認 VM 可以連到 GitHub，看到 `Hi mattkids0527/fitness-app! You've successfully authenticated` 就代表成功：
+登入後確認 `deploy` 帳號可以連到 GitHub，看到 `Hi mattkids0527/fitness-app! You've successfully authenticated` 就代表成功：
 
 ```bash
 ssh -T git@github.com
 ```
+
+> 這個測試要以 `deploy` 帳號執行，Deploy key 是放在 `deploy` 帳號底下的。如果是在瀏覽器版 SSH（你自己的帳號）測試，請改用 `sudo -u deploy ssh -T git@github.com`。用自己的帳號直接執行會出現 `Permission denied (publickey)`，這是正常的。
 
 **3. 確認網站連得到**
 
@@ -296,4 +299,5 @@ sudo -u postgres dropdb fitness_app_restore_test
   - 先看 `systemctl status cloudflared`、`journalctl -u cloudflared -n 50`。
   - 確認 Public Hostname 的 Service 是 `HTTP` → `127.0.0.1:80`。
   - 在 VM 上用 `curl -H "Host: wn52777.com" http://127.0.0.1/` 測試 nginx 本身有沒有回應。
+- **網站打不開，DNS 查到 `127.0.0.1`**：DNS 被手動設成 A 紀錄了。刪掉那筆紀錄，改在 Tunnel 的 Public Hostname 新增網域，讓 Cloudflare 自動建立 CNAME（見 §4）。
 - **要換 Tunnel token**：先執行 `sudo cloudflared service uninstall`，再重跑 `provision.sh` 貼上新的 token。
