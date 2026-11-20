@@ -47,7 +47,12 @@
 | 部署時間 | `2026-11-21 14:30`（Asia/Taipei） | — |
 | Commit | 短 sha（7 碼） | — |
 
-## 5. 不包含
+## 5. 「我的」頁入口
+
+- 手機要進設定頁得先點其中一個設定項目，所以「我的」頁設定清單在「登出」上方加一列「版本」，右邊顯示目前版號（沒有時顯示「未標示」），點進去是 `/settings/version`。
+- 版號由 `profile` 模組的 `ProfileController::show` 以 `appVersion` prop 帶入（只放版號字串）。
+
+## 6. 不包含
 
 - 更新紀錄列表、CHANGELOG.md。
 - 從舊 tag 重新部署（退版用 `dep rollback`）。

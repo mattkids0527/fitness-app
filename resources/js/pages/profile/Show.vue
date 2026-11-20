@@ -12,7 +12,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import type { SharedData } from '@/types';
 import type { EnergyTargets, Profile, ProfileOptions, WeightLogItem } from '@/types/profile';
 import { Head, Link, usePage } from '@inertiajs/vue3';
-import { ChevronRight, Flame, Link as LinkIcon, Lock, LogOut, Plus, Sun, Weight } from 'lucide-vue-next';
+import { ChevronRight, Flame, Link as LinkIcon, Lock, LogOut, Plus, Sun, Tag, Weight } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 const props = defineProps<{
@@ -20,6 +20,7 @@ const props = defineProps<{
     targets: EnergyTargets | null;
     currentWeight: WeightLogItem | null;
     options: ProfileOptions;
+    appVersion: string | null;
 }>();
 
 const page = usePage<SharedData>();
@@ -160,6 +161,11 @@ const activityFactor = computed(() => (props.profile.activity_level ? props.opti
                 </Link>
                 <Link :href="route('profile.edit')" class="flex min-h-[50px] items-center gap-3 border-b px-3.5 py-2.5 hover:bg-muted/50">
                     <Lock class="size-4" /><span class="flex-1">帳號與密碼</span><ChevronRight class="size-4 text-muted-foreground" />
+                </Link>
+                <Link :href="route('version')" class="flex min-h-[50px] items-center gap-3 border-b px-3.5 py-2.5 hover:bg-muted/50">
+                    <Tag class="size-4" /><span class="flex-1">版本</span>
+                    <span class="text-sm text-muted-foreground">{{ appVersion ?? '未標示' }}</span>
+                    <ChevronRight class="size-4 text-muted-foreground" />
                 </Link>
                 <Link
                     :href="route('logout')"

@@ -4,6 +4,7 @@ namespace Fitness\Profile\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\AppVersion;
 use Fitness\Profile\Http\Controllers\Traits\HasProfileFormOptions;
 use Fitness\Profile\Http\Requests\ProfileUpdateRequest;
 use Fitness\Profile\Repositories\Contracts\ProfileRepository;
@@ -25,9 +26,9 @@ class ProfileController extends Controller
     use HasProfileFormOptions;
 
     /**
-     * 顯示個人資料、目前體重、BMR 與每日目標。
+     * 顯示個人資料、目前體重、BMR 與每日目標，以及設定清單「版本」列要顯示的目前版號。
      */
-    public function show(Request $request, EnergyTargetCalculator $calculator, WeightLogService $weightLogs): Response
+    public function show(Request $request, EnergyTargetCalculator $calculator, WeightLogService $weightLogs, AppVersion $version): Response
     {
         $user = $request->user();
 
@@ -36,6 +37,7 @@ class ProfileController extends Controller
             'targets' => $calculator->forUser($user)?->toArray(),
             'currentWeight' => $weightLogs->current($user),
             'options' => $this->profileFormOptions(),
+            'appVersion' => $version->current()['version'] ?? null,
         ]);
     }
 
