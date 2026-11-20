@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 專案概述
 
-以 Laravel 12 官方 Vue Starter Kit 為基礎建立的手機優先飲食／健身紀錄應用（M1 帳號基礎已完成：首次設定、BMR／每日目標、體重紀錄、今日頁、底部 Tab 版型、PWA；M2 Google 登入已完成：設定頁綁定／解除 Google、以已綁定的 Google 帳號登入；D1 部署已完成：正式站 https://wn52777.com，GCP e2-micro + Cloudflare Tunnel，GitHub Actions 手動部署；M3 飲食＋喝水已完成：手動記錄餐點、常用食物／最近吃過／複製整餐快速帶入、喝水面板與建議量、今日頁實際攝取）。技術堆疊：Laravel 12 + Inertia.js 2 + Vue 3（TypeScript）+ Tailwind CSS 3 + shadcn-vue（radix-vue）+ Ziggy。資料庫為 PostgreSQL 16（以 `docker-compose.yml` 在本地起容器，對外 port 54329；開發庫 `fitness_app`、測試庫 `fitness_app_testing`）。語系 `zh_TW`（框架內建訊息在 `lang/zh_TW/`），時區 `Asia/Taipei`。
+以 Laravel 12 官方 Vue Starter Kit 為基礎建立的手機優先飲食／健身紀錄應用（M1 帳號基礎已完成：首次設定、BMR／每日目標、體重紀錄、今日頁、底部 Tab 版型、PWA；M2 Google 登入已完成：設定頁綁定／解除 Google、以已綁定的 Google 帳號登入；D1 部署已完成：正式站 https://wn52777.com，GCP e2-micro + Cloudflare Tunnel，GitHub Actions 手動部署；M3 飲食＋喝水已完成：手動記錄餐點、常用食物／最近吃過／複製整餐快速帶入、喝水面板與建議量、今日頁實際攝取；U1 介面精簡已完成：手機鎖住縮放、營養素與卡片改用圖示；D2 發版版號：部署時填版號、成功後打 tag 與 GitHub Release，設定頁「版本」分頁顯示目前版本）。技術堆疊：Laravel 12 + Inertia.js 2 + Vue 3（TypeScript）+ Tailwind CSS 3 + shadcn-vue（radix-vue）+ Ziggy。資料庫為 PostgreSQL 16（以 `docker-compose.yml` 在本地起容器，對外 port 54329；開發庫 `fitness_app`、測試庫 `fitness_app_testing`）。語系 `zh_TW`（框架內建訊息在 `lang/zh_TW/`），時區 `Asia/Taipei`。
 
 ## 常用指令
 
@@ -32,8 +32,9 @@ php artisan user:create --name="王小明" --email=ming@example.com --generate-p
 php artisan user:password ming@example.com --generate-password
 php artisan db:seed          # 本地開發帳號（只在 APP_ENV=local；帳密讀 .env 的 DEV_ACCOUNT_*，已完成首次設定，可重複執行）
 
-# 部署（正式部署用 GitHub Actions：Actions → deploy → Run workflow，分支 main；以下為本地除錯用）
-npm run build && DEPLOY_HOST=<VM 外部 IP> vendor/bin/dep deploy   # DEPLOY_HOST 格式 [帳號@]IP[:路徑]
+# 部署（正式部署用 GitHub Actions：Actions → deploy → Run workflow，分支 main，填版號 vX.Y.Z；以下為本地除錯用）
+deploy/check-version.sh v1.4.0                                    # 檢查版號能不能用（先 git fetch --tags）
+npm run build && DEPLOY_HOST=<VM 外部 IP> vendor/bin/dep deploy   # DEPLOY_HOST 格式 [帳號@]IP[:路徑]；加 DEPLOY_VERSION=vX.Y.Z 才會寫 version.json
 DEPLOY_HOST=<VM 外部 IP> vendor/bin/dep rollback                   # 只退程式碼，不退資料庫
 DEPLOY_HOST=<VM 外部 IP> vendor/bin/dep releases
 
@@ -46,7 +47,7 @@ DEPLOY_HOST=<VM 外部 IP> vendor/bin/dep releases
 
 注意：`tests/Pest.php` 存在，但 composer 並未安裝 Pest，現有測試皆為 PHPUnit class 寫法；新增測試請沿用 PHPUnit 風格（或先安裝 Pest）。
 
-CI（`.github/workflows/`）在 push/PR 到 `main`、`develop` 時執行：`lint.yml`（job `quality`：`pint --test`、`prettier --check`、`eslint .`，只檢查不修改）與 `tests.yml`（job `ci`：`npm run build` 後跑 PHPUnit；PHP 8.4、Node 22，PostgreSQL 16 以 service container 提供，同樣對應 port 54329）。`main` 有分支保護：必須透過 PR，`quality`、`ci` 通過才能合併。CD 是 `deploy.yml`，只能手動觸發且只部署 `main`。Feature 測試會渲染 Inertia 頁面，需要已建置的 Vite manifest，本地若測試因 manifest 缺失失敗，先跑 `npm run build`。`assertInertia()` 會檢查頁面檔存在，路徑設定在 `config/inertia.php`（`resources/js/pages`，小寫）。測試情境紀錄在 `vibe-coding/tests/`。
+CI（`.github/workflows/`）在 push/PR 到 `main`、`develop` 時執行：`lint.yml`（job `quality`：`pint --test`、`prettier --check`、`eslint .`，只檢查不修改）與 `tests.yml`（job `ci`：`npm run build` 後跑 PHPUnit；PHP 8.4、Node 22，PostgreSQL 16 以 service container 提供，同樣對應 port 54329）。`main` 有分支保護：必須透過 PR，`quality`、`ci` 通過才能合併。CD 是 `deploy.yml`，只能手動觸發且只部署 `main`，必須填版號（見下方「部署」的版號規則）。Feature 測試會渲染 Inertia 頁面，需要已建置的 Vite manifest，本地若測試因 manifest 缺失失敗，先跑 `npm run build`。`assertInertia()` 會檢查頁面檔存在，路徑設定在 `config/inertia.php`（`resources/js/pages`，小寫）。測試情境紀錄在 `vibe-coding/tests/`。
 
 測試庫 `fitness_app_testing` 由 `docker/postgres/init/` 的 SQL 在容器**第一次初始化**時建立；若 volume 早於此腳本存在，需 `docker compose down -v` 重建，或手動 `CREATE DATABASE fitness_app_testing`。
 
@@ -63,7 +64,7 @@ CI（`.github/workflows/`）在 push/PR 到 `main`、`develop` 時執行：`lint
 - `profile` 模組透過 HTTP Kernel 的 `appendMiddlewareToGroup()` 把 `EnsureProfileCompleted` 加到 `web` middleware 群組（不要改用 Router 的 `pushMiddlewareToGroup()`，Kernel 重新同步群組時會被蓋掉）：已登入但未完成首次設定（`users.onboarded_at` 為空）的使用者，所有頁面都會被導向 `/onboarding`。新增「未完成設定也要能進入」的路由時，把路由名稱加到 `config('fitness.profile.onboarding_except_routes')`。測試用的 `UserFactory` 預設為已完成設定，要測未完成狀態用 `->notOnboarded()`。
 
 ### 前端結構（`resources/js`，alias `@` → `resources/js`）
-- `pages/`：Inertia 頁面（`auth/`、`settings/`、`profile/`、`daily-summary/`、`social-login/`、`meal/`、`ComingSoon.vue`）。
+- `pages/`：Inertia 頁面（`auth/`、`settings/`（個人帳號、密碼、外觀、版本）、`profile/`、`daily-summary/`、`social-login/`、`meal/`、`ComingSoon.vue`）。
 - 業務模組：`profile`（首次設定、BMR／每日目標、體重紀錄）、`daily-summary`（今日頁；發出收集型事件 `DailySummaryCollecting`，各模組以 listener `addSection()` 加入當日摘要，前端依 `sections.<key>` 顯示）、`social-login`（已連結帳號頁、登入頁的第三方按鈕 `components/social-login/SocialLoginButtons.vue`）、`meal`（飲食頁、新增／編輯餐點、常用食物；`meals`／`meal_items`／`saved_foods`，依賴 profile 的 `UserCalendar` 切日與 `EnergyTargetCalculator`；份數換算在前端 `composables/useMealFood.ts`）、`water`（喝水面板 `components/water/WaterSheet.vue` 掛在 `AppSidebarLayout`，資料由模組 Provider 以 `Inertia::share('water', Inertia::optional(...))` 提供，打開面板時 `router.reload({ only: ['water'] })` 載入；建議量＝最新體重 × 35 ml）。
 - `layouts/`：頁面以 `AppLayout`（內部委派給 `layouts/app/AppSidebarLayout` 或 `AppHeaderLayout`）或 `AuthLayout`（委派給 `layouts/auth/*`）包裝；設定頁再套 `layouts/settings/Layout.vue`（分頁：個人帳號、密碼、外觀、已連結帳號；新增設定分頁改這裡的 `sidebarNavItems`）。切換整站版型時改這兩個入口檔即可。
 - `components/`：應用元件。版型：手機（< 768px）用 `AppBottomNav.vue` 底部 Tab，桌機用 `AppSidebar.vue` 側欄；`QuickAddDialog.vue`（＋選單）、`profile/WeightLogSheet.vue`、`AppToast.vue` 掛在 `layouts/app/AppSidebarLayout.vue`，開關狀態在 `composables/useQuickActions.ts`、`useToast.ts`。`ResponsiveDialog.vue` 手機為底部面板、桌機為置中對話框；`AppPage.vue` 是頁面標題＋內容容器。模組元件放 `components/<module>/`，型別放 `types/<module>.ts`。
@@ -82,6 +83,7 @@ CI（`.github/workflows/`）在 push/PR 到 `main`、`develop` 時執行：`lint
 - 架構：Cloudflare（`wn52777.com`，HTTPS、`/build/` 邊緣快取）→ Tunnel → GCP e2-micro（1GB RAM）上的 nginx（只聽 127.0.0.1:80）→ PHP 8.4-FPM（以 `deploy` 身分執行）→ PostgreSQL 16。VM 只開 SSH；nginx 對 PHP 固定 `HTTPS=on`，並以 `CF-Connecting-IP` 作為使用者 IP，所以 Laravel 不需要 `trustProxies`。
 - VM 環境由 `deploy/provision.sh` 建立（可重複執行）。CD 只部署程式碼；要改 PHP 擴充、nginx、cron、queue worker 等系統設定時，改這支腳本，再到 VM 重跑。
 - 部署用 Deployer（`deploy.php`，`recipe/laravel.php`，保留 3 個版本）。前端在 runner／本地建置後上傳，VM 不跑 npm。
+- 版號：`vMAJOR.MINOR.PATCH`，新功能（M 系列）升中間碼，修 bug／介面調整（U）／部署流程（D）升最後一碼；第一版 `v1.3.0`。workflow 以 `deploy/check-version.sh` 擋下格式錯誤、重複、比最新 tag 小的版號，以 `--revision=$GITHUB_SHA` 部署，Deployer 在版本目錄寫 `version.json`（版號、commit、部署時間，`.gitignore` 已排除），成功後才打 annotated tag 並 `gh release create --generate-notes`。設定頁「版本」由 `app/Support/AppVersion.php` 讀 `version.json`，`dep rollback` 後顯示的版號跟著退回。
 - GitHub Environment `production`：`DEPLOY_HOST`（Variable，`[帳號@]IP[:路徑]`）、`DEPLOY_SSH_KEY`、`DEPLOY_HOST_KEY`、`PRODUCTION_ENV`（整份正式環境 `.env`，每次部署覆蓋 VM 的 `shared/.env`，舊版存成 `.env.previous`）。改正式設定要改 `PRODUCTION_ENV` 再部署，不要直接改 VM 的 `.env`。
 - 正式環境 `QUEUE_CONNECTION=sync`、沒有排程；之後有 queue job（M4）要在 `provision.sh` 加 worker。資料庫每天 03:00 備份到 `/var/backups/fitness-app/`（保留 7 份）。
 - migration 要相容新舊版程式（`coding-style.md` §12），因為 `dep rollback` 不會退回資料庫。在 VM 上執行 artisan 一律 `sudo -u deploy php artisan ...`。

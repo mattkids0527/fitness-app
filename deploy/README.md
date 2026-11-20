@@ -322,6 +322,7 @@ sudo -u postgres bash -c 'f=$(ls -1t /var/backups/fitness-app/*.dump | head -1);
 | `DEPLOY_SSH_KEY_FILE` | 否 | 私鑰檔案路徑，預設 `~/.ssh/fitness_deploy` |
 | `DEPLOY_KNOWN_HOSTS_FILE` | 否 | 只信任這個 known_hosts 檔裡的 VM host key（GitHub Actions 使用） |
 | `DEPLOY_ENV_FILE` | 否 | 要上傳成正式環境 `.env` 的檔案。不提供時沿用 VM 上現有的 `.env` |
+| `DEPLOY_VERSION` | 否 | 這次部署的版號（`vX.Y.Z`），寫進新版本目錄的 `version.json`，設定頁「版本」會顯示。不提供時不寫，設定頁顯示「未標示版本」。本地部署不會打 tag |
 
 ### 從本地（WSL）部署
 
@@ -432,11 +433,24 @@ ssh -t -i ~/.ssh/fitness_deploy deploy@<VM 外部 IP> "cd /var/www/fitness-app/c
 
 ## 9. GitHub Actions 部署按鈕
 
-`.github/workflows/deploy.yml` 只能手動觸發，而且只能部署 `main`。流程如下：
+`.github/workflows/deploy.yml` 只能手動觸發，而且只能部署 `main`，每次都要填版號。流程如下：
 
-1. 在 GitHub 的機器上 checkout `main`，安裝相依套件，`npm run build`。
-2. 從 Environment `production` 讀取部署目標、SSH 金鑰、VM host key、`.env`。
-3. 執行 `vendor/bin/dep deploy`，和 §8 的流程相同，會上傳 `.env`。
+1. 在 GitHub 的機器上 checkout `main`（含所有 tag），用 `deploy/check-version.sh` 檢查版號，不符就停止，不會部署。
+2. 安裝相依套件，`npm run build`。
+3. 從 Environment `production` 讀取部署目標、SSH 金鑰、VM host key、`.env`。
+4. 執行 `vendor/bin/dep deploy --revision=<觸發當下的 commit>`，和 §8 的流程相同，會上傳 `.env`，並寫入 `version.json`。
+5. 部署成功後，在該 commit 打 tag（例如 `v1.3.0`）並建立 GitHub Release，說明由 GitHub 依合併的 PR 自動產生。部署失敗不打 tag，同一個版號修好後可以再用。
+
+### 版號規則
+
+格式 `vMAJOR.MINOR.PATCH`，第一個版本是 `v1.3.0`（M1～M3、U1、D2）。
+
+| 這次上線的內容 | 怎麼升 | 例子 |
+|---|---|---|
+| 新功能（M 系列 milestone） | 升中間碼，最後一碼歸零 | `v1.3.2` → `v1.4.0` |
+| 修 bug、介面調整（U 系列）、部署流程（D 系列） | 升最後一碼 | `v1.4.0` → `v1.4.1` |
+
+版號會被擋下的情況：格式不是 `v數字.數字.數字`、tag 已經存在、比目前最大的 `v*` tag 小。要先確認可以在本地執行 `git fetch --tags && deploy/check-version.sh v1.4.0`。
 
 ### 第一次設定
 
@@ -474,7 +488,8 @@ ssh -t -i ~/.ssh/fitness_deploy deploy@<VM 外部 IP> "cd /var/www/fitness-app/c
 ### 部署
 
 1. 開 PR 把 `develop` 合併進 `main`。
-2. 到 **Actions → deploy → Run workflow**，分支選 `main`，按 **Run workflow**。
+2. 到 **Actions → deploy → Run workflow**，分支選 `main`，在 **版號** 填這次的版號（例如 `v1.4.0`），按 **Run workflow**。
+3. 完成後，repo 的 **Releases** 會出現該版號；正式站「設定 → 版本」顯示同一個版號。
 
 > `deploy.yml` 必須已經在 `main` 上，Actions 頁面才會出現 **Run workflow** 按鈕。所以第一次要先把 `develop` 合進 `main`。
 
@@ -507,12 +522,15 @@ GitHub Secret 存進去後**看不到內容**，只能整份覆蓋。但 VM 上�
 
 | 想做的事 | 做法 |
 |---|---|
-| VM 外部 IP 換了 | 改 Variable `DEPLOY_HOST`，再按一次部署 |
+| VM 外部 IP 換了 | 改 Variable `DEPLOY_HOST`，再按一次部署（版號升最後一碼） |
 | 修改 `.env`（例如加 Google 憑證） | 從 VM 讀出目前的 `.env`，修改後整份更新 Secret `PRODUCTION_ENV`，再按一次部署（見上一節） |
 | 重建了 VM | 更新 `DEPLOY_HOST_KEY`、`DEPLOY_HOST`；`PRODUCTION_ENV` 的 `DB_PASSWORD` 要換成新 VM 產生的密碼 |
 | 換部署金鑰 | 新的公鑰加進 VM 的 `/home/deploy/.ssh/authorized_keys`，再更新 `DEPLOY_SSH_KEY` |
 
 ## 疑難排解
+
+- **部署成功，但「Tag and Release」步驟失敗**：正式站已經是新版本，只差 tag 或 Release。若 tag 已經推上去，到 GitHub **Releases → Draft a new release** 選該 tag，按 **Generate release notes** 後發布；若 tag 也沒推上去，在本地對該次部署的 commit（Actions 記錄的 `GITHUB_SHA`）執行 `git tag -a v1.4.0 -m "Release v1.4.0" <commit> && git push origin v1.4.0`，再建 Release。不要用同一個版號重跑部署，會因為 tag 已存在被擋下。如果 repo 有 tag 保護規則（Rulesets 對 `v*`），要允許 GitHub Actions 建立 tag。
+- **`dep rollback` 之後的版號**：`version.json` 在每個版本目錄內，退版後設定頁會顯示舊版本的版號；GitHub 上的 tag 與 Release 不會變。
 
 - **用 `deploy` 帳號登不進去**：主控台的瀏覽器版 SSH 是用 Google 自動產生的金鑰登入你自己的帳號，不受腳本「關閉密碼登入」的影響，可以先從那邊登入檢查 `/home/deploy/.ssh/authorized_keys`。腳本對 SSH 的設定都在 `/etc/ssh/sshd_config.d/99-fitness-app.conf`。
 - **自己的 IP 被 fail2ban 封鎖**：用主控台的瀏覽器版 SSH 登入，執行 `sudo fail2ban-client set sshd unbanip <你的 IP>`。

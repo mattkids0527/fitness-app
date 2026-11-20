@@ -22,6 +22,10 @@ const sidebarNavItems: NavItem[] = [
         title: '已連結帳號',
         href: '/settings/connected-accounts',
     },
+    {
+        title: '版本',
+        href: '/settings/version',
+    },
 ];
 
 const currentPath = window.location.pathname;
@@ -29,7 +33,7 @@ const currentPath = window.location.pathname;
 
 <template>
     <div class="px-4 py-6">
-        <Heading title="設定" description="管理帳號、密碼、外觀與已連結帳號" />
+        <Heading title="設定" description="管理帳號、密碼、外觀與已連結帳號，查看目前版本" />
 
         <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-x-12 lg:space-y-0">
             <aside class="w-full max-w-xl lg:w-48">

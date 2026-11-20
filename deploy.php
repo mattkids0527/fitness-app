@@ -17,6 +17,8 @@
  *   DEPLOY_SSH_KEY_FILE  選填。登入 VM 用的私鑰檔案路徑，預設 ~/.ssh/fitness_deploy
  *   DEPLOY_KNOWN_HOSTS_FILE  選填。VM host key 所在的 known_hosts 檔；有提供時只信任這個檔案（GitHub Actions 使用）
  *   DEPLOY_ENV_FILE      選填。要上傳成正式環境 .env 的檔案；不提供時沿用 VM 上現有的 .env
+ *   DEPLOY_VERSION       選填。這次部署的版號（vX.Y.Z），寫進新版本目錄的 version.json 給設定頁顯示；
+ *                        不提供時不寫，設定頁顯示「未標示版本」。GitHub Actions 部署一律會提供
  */
 
 namespace Deployer;
@@ -97,7 +99,25 @@ function validatedEnvContent(string $file): string
     return rtrim($content, "\n")."\n";
 }
 
+/**
+ * 取得這次部署的版號；沒有設定時回傳 null，格式不是 vX.Y.Z 時直接中止。
+ */
+function deployVersion(): ?string
+{
+    $value = trim((string) getenv('DEPLOY_VERSION'));
+    if ($value === '') {
+        return null;
+    }
+
+    if (! preg_match('/^v\d+\.\d+\.\d+$/', $value)) {
+        throw new \RuntimeException("DEPLOY_VERSION 格式錯誤：「{$value}」，應為 v數字.數字.數字，例如 v1.3.0");
+    }
+
+    return $value;
+}
+
 $target = deployTarget();
+$version = deployVersion();
 
 $production = host('production')
     ->setHostname($target['host'])
@@ -152,6 +172,25 @@ task('deploy:upload_env', function () {
     info('已更新 shared/.env（舊版備份在 shared/.env.previous）');
 });
 
+desc('在新版本目錄寫入 version.json（版號、commit、部署時間），供設定頁顯示');
+task('deploy:version_file', function () use ($version) {
+    if ($version === null) {
+        warning('沒有提供 DEPLOY_VERSION，這次部署不寫 version.json，設定頁會顯示「未標示版本」');
+
+        return;
+    }
+
+    // commit 取自 deploy:update_code 寫入的 REVISION，也就是實際部署的那個 commit
+    $json = json_encode([
+        'version' => $version,
+        'commit' => trim(run('cat {{release_path}}/REVISION')),
+        'deployed_at' => gmdate('Y-m-d\TH:i:s\Z'),
+    ], JSON_UNESCAPED_SLASHES);
+
+    run('echo '.escapeshellarg($json).' > {{release_path}}/version.json');
+    info("已寫入版本資訊：{$version}");
+});
+
 desc('上傳本地建置好的前端到新版本目錄');
 task('deploy:upload_build', function () {
     upload(__DIR__.'/public/build/', '{{release_path}}/public/build/');
@@ -167,6 +206,7 @@ before('deploy', 'build:check');
 
 // .env 要在連結 shared 檔案與 config:cache 之前更新，新設定才會隨這次部署生效
 before('deploy:shared', 'deploy:upload_env');
+after('deploy:update_code', 'deploy:version_file');
 after('deploy:vendors', 'deploy:upload_build');
 
 // 切換 current 連結後（含 rollback）重新載入 PHP-FPM
