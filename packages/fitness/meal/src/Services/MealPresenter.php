@@ -48,6 +48,7 @@ class MealPresenter
             'time' => $eatenAt->format('H:i'),
             'meal_type' => $meal->meal_type->value,
             'note' => $meal->note,
+            'source' => $meal->source,
             'kcal' => $this->nutrition->summarize($meal->items)['totals']['kcal'],
             'item_names' => $meal->items->pluck('name')->all(),
         ];
@@ -62,7 +63,20 @@ class MealPresenter
     {
         return [
             ...$this->summary($meal, $timezone),
-            'items' => $meal->items->map(fn (MealItem $item) => $this->food($item))->all(),
+            'items' => $meal->items->map(fn (MealItem $item) => $this->item($item))->all(),
+        ];
+    }
+
+    /**
+     * 餐點裡的一個項目：食物內容加上照片分析的信心度（手動項目為 null）。
+     *
+     * @return array<string, mixed>
+     */
+    public function item(MealItem $item): array
+    {
+        return [
+            ...$this->food($item),
+            'confidence' => $item->confidence,
         ];
     }
 

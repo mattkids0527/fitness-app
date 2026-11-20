@@ -26,6 +26,12 @@ return [
     'max_items' => env('MEAL_MAX_ITEMS', 30),
 
     /*
+    | 照片分析上傳的照片：允許的類型與大小上限（KB）。前端會先壓縮成約 300～500KB 的 JPEG。
+    */
+    'photo_mimetypes' => ['image/jpeg', 'image/png', 'image/webp'],
+    'photo_max_kb' => 5120,
+
+    /*
     | 「最近吃過」取近幾天、最多幾筆（依名稱取最近一次）。
     */
     'recent_foods_days' => 30,

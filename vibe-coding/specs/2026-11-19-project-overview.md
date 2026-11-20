@@ -24,8 +24,8 @@
 | 第三方登入 | Laravel Socialite | **已決**：第一版只做 Google |
 | LLM | **已決**：Google Gemini API（vision + JSON schema 結構化輸出） | 模型 ID 放 `.env`（`GEMINI_MODEL`），M4 實測後決定；後端以介面 `FoodImageAnalyzer` 包起來，日後可換 |
 | LLM 套件 | **已決**：Prism（`prism-php/prism`） | 見 §2.1 |
-| 非同步 | Laravel Queue（database driver） | 照片分析丟背景 job，前端輪詢狀態 |
-| 檔案儲存 | Laravel Storage（Flysystem）+ 縮圖處理 | 見 §2.2 |
+| 非同步 | Laravel Queue（database driver） | ~~照片分析丟背景 job，前端輪詢狀態~~ M4 改為同步分析，見 [M4 規格](2026-11-21-m4-photo-analysis.md) |
+| 檔案儲存 | Laravel Storage（Flysystem）+ 縮圖處理 | 見 §2.2；M4 決定照片不存伺服器 |
 | 資料庫 | **已決**：PostgreSQL（本地開發與測試都用） | 見 §2.3 |
 | 時區 | 使用者時區（預設 Asia/Taipei） | 「一天」以使用者時區切日 |
 

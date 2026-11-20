@@ -29,6 +29,9 @@ export interface NutritionTotals {
     fiber_g: number;
 }
 
+/** 餐點來源：手動記錄或照片分析。 */
+export type MealSource = 'manual' | 'ai';
+
 /** 列表用的餐點摘要；date、time 為使用者時區。 */
 export interface MealSummary {
     id: number;
@@ -36,13 +39,19 @@ export interface MealSummary {
     time: string;
     meal_type: MealType;
     note: string | null;
+    source: MealSource;
     kcal: number;
     item_names: string[];
 }
 
+/** 餐點裡的一個項目；confidence 為照片分析的信心度（0～1），手動項目為 null。 */
+export interface MealItemValues extends FoodValues {
+    confidence?: number | null;
+}
+
 /** 編輯表單與複製整餐用的完整餐點（含項目）。 */
 export interface MealDetail extends MealSummary {
-    items: FoodValues[];
+    items: MealItemValues[];
 }
 
 /** 常用食物（數值為一份）。 */
@@ -63,8 +72,9 @@ export interface MealFormDefaults {
     meal_type: MealType;
     type_chosen: boolean;
     note: string;
-    items: FoodValues[];
+    items: MealItemValues[];
     copied_from: MealSummary | null;
+    food_analysis_id: number | null;
 }
 
 export interface MealFormLimits {
@@ -84,8 +94,27 @@ export interface MealFormItem {
     fat_g: number | string;
     fiber_g: number | string;
     saved_food_id: number | null;
+    confidence: number | null;
     open: boolean;
 }
+
+/** 今天剩餘的照片分析次數與每日上限。 */
+export interface AnalysisQuota {
+    remaining: number;
+    limit: number;
+}
+
+/** 確認頁的分析摘要；time_source 表示用餐時間取自照片拍攝時間或現在。 */
+export interface MealAnalysisSummary {
+    id: number;
+    item_count: number;
+    hint: string | null;
+    time_source: 'photo' | 'now';
+    quota: AnalysisQuota;
+}
+
+/** 照片分析頁的入口：拍照或上傳照片。 */
+export type AnalyzeMode = 'camera' | 'upload';
 
 /** meal 模組加入今日頁的區塊。 */
 export interface MealSummarySection {

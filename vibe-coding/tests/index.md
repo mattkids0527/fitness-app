@@ -8,3 +8,4 @@
 - 2026-11-20-social-login/social-login 與 social-login-google 模組（Google 登入、綁定、解除綁定）/2026-11-20 111646 — [情境](2026-11-20-social-login.md)
 - 2026-11-20-meal-water/meal、water 模組（飲食紀錄、常用食物、最近吃過、複製整餐、喝水、今日頁區塊）/2026-11-20 215805 — [情境](2026-11-20-meal-water.md)
 - 2026-11-21-release-version/設定頁版本分頁（讀取 version.json）/2026-11-21 002421 — [情境](2026-11-21-release-version.md)
+- 2026-11-21-photo-analysis/照片分析（food-analyzer、food-analyzer-gemini、meal 照片分析與確認存檔）/2026-11-21 071829 — [情境](2026-11-21-photo-analysis.md)

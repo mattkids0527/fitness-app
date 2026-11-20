@@ -22,6 +22,14 @@ class MealRepository implements MealRepositoryContract
     }
 
     /**
+     * 以 user_id 與 food_analysis_id（唯一索引）查詢。
+     */
+    public function findByFoodAnalysis(int $userId, int $foodAnalysisId): ?Meal
+    {
+        return Meal::where('user_id', $userId)->where('food_analysis_id', $foodAnalysisId)->first();
+    }
+
+    /**
      * 取得某段時間內已確認的餐點，依用餐時間由早到晚。
      */
     public function confirmedBetween(int $userId, CarbonInterface $from, CarbonInterface $to): Collection

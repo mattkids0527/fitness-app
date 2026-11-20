@@ -30,9 +30,14 @@ export function scaleFood(food: FoodValues, servings: number): FoodValues {
 }
 
 /**
- * 食物資料轉成表單項目（null 轉成空字串）。
+ * 食物資料轉成表單項目（null 轉成空字串）；confidence 只在照片分析的項目帶入，儲存時送回後端才會保留。
  */
-export function toFormItem(food: FoodValues | null = null, savedFoodId: number | null = null, open = false): MealFormItem {
+export function toFormItem(
+    food: FoodValues | null = null,
+    savedFoodId: number | null = null,
+    open = false,
+    confidence: number | null = null,
+): MealFormItem {
     const item: MealFormItem = {
         key: ++itemSeq,
         name: food?.name ?? '',
@@ -44,6 +49,7 @@ export function toFormItem(food: FoodValues | null = null, savedFoodId: number |
         fat_g: '',
         fiber_g: '',
         saved_food_id: savedFoodId,
+        confidence,
         open,
     };
 
@@ -55,7 +61,9 @@ export function toFormItem(food: FoodValues | null = null, savedFoodId: number |
 /**
  * 表單項目轉回送出的資料；熱量沒填時保留 null，讓後端回傳「熱量為必填」。
  */
-export function fromFormItem(item: MealFormItem): Omit<FoodValues, 'kcal'> & { kcal: number | null; saved_food_id: number | null } {
+export function fromFormItem(
+    item: MealFormItem,
+): Omit<FoodValues, 'kcal'> & { kcal: number | null; saved_food_id: number | null; confidence: number | null } {
     return {
         name: item.name.trim(),
         portion: item.portion.trim() || null,
@@ -66,6 +74,7 @@ export function fromFormItem(item: MealFormItem): Omit<FoodValues, 'kcal'> & { k
         fat_g: toNumber(item.fat_g),
         fiber_g: toNumber(item.fiber_g),
         saved_food_id: item.saved_food_id,
+        confidence: item.confidence,
     };
 }
 

@@ -405,6 +405,21 @@ cd /var/www/fitness-app/current && sudo -u deploy php artisan config:cache && su
 
 **正式環境的 Google 登入**：在 Google Cloud 建立正式環境專用的 OAuth 用戶端（網頁應用程式），已授權的重新導向 URI 填 `https://wn52777.com/auth/google/callback`。把用戶端 ID 和密鑰填入 `PRODUCTION_ENV` 的 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET` 後重新部署，登入頁就會出現 Google 按鈕。詳細步驟見 [social-login-google 模組說明](../packages/fitness/social-login-google/README.md)。
 
+**正式環境的照片分析（Gemini）**：到 Google AI Studio 申請 API 金鑰（步驟見 [food-analyzer-gemini 模組說明](../packages/fitness/food-analyzer-gemini/README.md)），在 `PRODUCTION_ENV` 加入下列設定後重新部署。沒填 `GEMINI_API_KEY` 時網站照常運作，只是照片分析顯示「暫時無法使用」。
+
+```dotenv
+FOOD_ANALYZER_DRIVER=gemini
+FOOD_ANALYZER_DAILY_LIMIT=20
+FOOD_ANALYZER_TIMEOUT=25
+GEMINI_API_KEY=<API 金鑰>
+GEMINI_MODEL=gemini-3.1-flash-lite
+GEMINI_THINKING_LEVEL=low
+```
+
+- 照片只在分析的那次請求裡轉送給 Gemini，伺服器不保存；分析為同步呼叫（25 秒逾時），不需要 queue worker，`provision.sh` 不用改。VM 現有的 `client_max_body_size 12M`、`upload_max_filesize 10M` 已足夠（前端壓縮後約 300～500KB，後端上限 5MB）。
+- 目前用免費層：Google 可能用上傳內容改進產品，也有次數限制（被限制時畫面顯示「Gemini 暫時忙碌」）。改付費層只要在 Google 端開帳單，不用改程式或設定。
+- 換模型只要改 `GEMINI_MODEL` 再部署；每次呼叫都記錄在資料庫 `llm_logs`（模型、prompt、回應、token、耗時），可以用來比較。
+
 ### 建立正式環境帳號
 
 第一版不開放註冊，帳號用指令建立。第一次部署完成後執行：
@@ -523,7 +538,7 @@ GitHub Secret 存進去後**看不到內容**，只能整份覆蓋。但 VM 上�
 | 想做的事 | 做法 |
 |---|---|
 | VM 外部 IP 換了 | 改 Variable `DEPLOY_HOST`，再按一次部署（版號升最後一碼） |
-| 修改 `.env`（例如加 Google 憑證） | 從 VM 讀出目前的 `.env`，修改後整份更新 Secret `PRODUCTION_ENV`，再按一次部署（見上一節） |
+| 修改 `.env`（例如加 Google 憑證、Gemini 金鑰） | 從 VM 讀出目前的 `.env`，修改後整份更新 Secret `PRODUCTION_ENV`，再按一次部署（見上一節） |
 | 重建了 VM | 更新 `DEPLOY_HOST_KEY`、`DEPLOY_HOST`；`PRODUCTION_ENV` 的 `DB_PASSWORD` 要換成新 VM 產生的密碼 |
 | 換部署金鑰 | 新的公鑰加進 VM 的 `/home/deploy/.ssh/authorized_keys`，再更新 `DEPLOY_SSH_KEY` |
 

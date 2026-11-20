@@ -17,9 +17,12 @@ export interface NavItem {
     badge?: string;
 }
 
+/** 一次性錯誤；照片分析失敗時另帶失敗種類 code 與今天剩餘次數 remaining。 */
 export interface FlashError {
     title: string;
     message: string;
+    code?: string;
+    remaining?: number;
 }
 
 export interface Flash {

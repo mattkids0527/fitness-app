@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppPage from '@/components/AppPage.vue';
 import FieldLabel from '@/components/FieldLabel.vue';
+import FlashAlert from '@/components/FlashAlert.vue';
 import InputError from '@/components/InputError.vue';
 import FoodPicker from '@/components/meal/FoodPicker.vue';
 import MealItemCard from '@/components/meal/MealItemCard.vue';
@@ -9,13 +10,16 @@ import ResponsiveDialog from '@/components/ResponsiveDialog.vue';
 import SegmentedControl from '@/components/SegmentedControl.vue';
 import { Button } from '@/components/ui/button';
 import UnitInput from '@/components/UnitInput.vue';
+import { confidenceLevel } from '@/composables/useConfidence';
 import { shortDate } from '@/composables/useDateFormat';
 import { currentTime, fromFormItem, mealTypeForTime, toFormItem, toNumber } from '@/composables/useMealFood';
+import { useMealPhoto } from '@/composables/useMealPhoto';
 import { formatKcal } from '@/composables/useNutritionFormat';
 import { useToast } from '@/composables/useToast';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type {
     FoodValues,
+    MealAnalysisSummary,
     MealDetail,
     MealFormDefaults,
     MealFormItem,
@@ -26,8 +30,8 @@ import type {
     SavedFood,
 } from '@/types/meal';
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { LoaderCircle, Plus, Repeat, Trash2 } from 'lucide-vue-next';
-import { computed, nextTick, ref } from 'vue';
+import { ImageIcon, ImageUp, LoaderCircle, Plus, Repeat, Sparkles, Trash2 } from 'lucide-vue-next';
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 
 const props = defineProps<{
     today: string;
@@ -38,6 +42,7 @@ const props = defineProps<{
     limits: MealFormLimits;
     meal: MealDetail | null;
     defaults: MealFormDefaults | null;
+    analysis: MealAnalysisSummary | null;
 }>();
 
 const { show } = useToast();
@@ -49,7 +54,8 @@ const form = useForm({
     time: initial.time,
     meal_type: initial.meal_type as MealType | null,
     note: initial.note ?? '',
-    items: initial.items.map((food) => toFormItem(food)),
+    food_analysis_id: props.defaults?.food_analysis_id ?? null,
+    items: initial.items.map((food) => toFormItem(food, null, false, food.confidence ?? null)),
 });
 
 // 使用者手動選過餐別後，改時間不再自動切換；改過時間後，改日期不再帶入預設時間
@@ -61,10 +67,19 @@ const servingsOpen = ref(false);
 const confirmDeleteOpen = ref(false);
 const deleting = ref(false);
 
+// 照片分析的確認頁：縮圖取自瀏覽器暫存的照片（只在同一筆分析時顯示，重新整理後就沒有）
+const photo = useMealPhoto();
+const thumbnail = computed(() => (props.analysis && photo.analysisId.value === props.analysis.id ? photo.previewUrl.value : null));
+const hasLowConfidence = computed(() => form.items.some((item) => item.confidence !== null && confidenceLevel(item.confidence).low));
+const leaveOpen = ref(false);
+let leaveTo: string | null = null;
+let leaveAllowed = false;
+
 const backHref = computed(() => route('fitness.meal.index', initial.date === props.today ? {} : { date: initial.date }));
 const totalKcal = computed(() => form.items.reduce((sum, item) => sum + (toNumber(item.kcal) ?? 0), 0));
 const savedNames = computed(() => new Set(props.saved_foods.map((food) => food.name.trim().toLowerCase())));
 const errors = computed(() => form.errors as Partial<Record<string, string>>);
+const pageTitle = isEdit ? '編輯餐點' : props.analysis ? '確認分析結果' : '新增餐點';
 const typeLabel = (value: MealType) => props.meal_types.find((type) => type.value === value)?.label ?? '';
 
 /**
@@ -185,7 +200,7 @@ function star(item: MealFormItem) {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { saved_food_id, ...food } = fromFormItem(item);
+    const { saved_food_id, confidence, ...food } = fromFormItem(item);
 
     router.post(route('fitness.meal.saved_foods.store'), food, {
         preserveState: true,
@@ -206,6 +221,12 @@ function submit() {
 
     const options = {
         preserveScroll: true,
+        onSuccess: () => {
+            if (props.analysis) {
+                leaveAllowed = true;
+                photo.clear();
+            }
+        },
         onError: (errors: Record<string, string>) => {
             form.items.forEach((item, index) => {
                 if (Object.keys(errors).some((key) => key.startsWith(`items.${index}.`))) {
@@ -221,6 +242,54 @@ function submit() {
         form.post(route('fitness.meal.store'), options);
     }
 }
+
+/**
+ * 放棄這次分析：丟棄暫存照片，前往原本要去的頁面。
+ */
+function leave() {
+    leaveAllowed = true;
+    leaveOpen.value = false;
+
+    if (props.analysis && photo.analysisId.value === props.analysis.id) {
+        photo.clear();
+    }
+
+    router.visit(leaveTo ?? route('fitness.meal.index'));
+}
+
+/**
+ * 關閉或重新整理分頁時由瀏覽器詢問。
+ */
+function onBeforeUnload(event: BeforeUnloadEvent) {
+    event.preventDefault();
+}
+
+// 確認頁離開前詢問是否放棄這次分析；送出表單、只重新載入部分資料（例如喝水面板）不攔
+let removeLeaveGuard: (() => void) | null = null;
+
+onMounted(() => {
+    if (!props.analysis) {
+        return;
+    }
+
+    window.addEventListener('beforeunload', onBeforeUnload);
+    removeLeaveGuard = router.on('before', (event) => {
+        const visit = event.detail.visit;
+
+        if (leaveAllowed || visit.method !== 'get' || visit.only.length > 0) {
+            return;
+        }
+
+        event.preventDefault();
+        leaveTo = visit.url.href;
+        leaveOpen.value = true;
+    });
+});
+
+onUnmounted(() => {
+    window.removeEventListener('beforeunload', onBeforeUnload);
+    removeLeaveGuard?.();
+});
 
 /**
  * 刪除這一餐；成功訊息由後端 flash 經 AppToast 顯示。
@@ -241,14 +310,14 @@ function destroy() {
 </script>
 
 <template>
-    <Head :title="isEdit ? '編輯餐點' : '新增餐點'" />
+    <Head :title="pageTitle" />
     <AppLayout
         :breadcrumbs="[
             { title: '飲食', href: route('fitness.meal.index') },
-            { title: isEdit ? '編輯餐點' : '新增餐點', href: '' },
+            { title: pageTitle, href: '' },
         ]"
     >
-        <AppPage :title="isEdit ? '編輯餐點' : '新增餐點'" :back-href="backHref">
+        <AppPage :title="pageTitle" :back-href="backHref">
             <template v-if="isEdit" #actions>
                 <button
                     type="button"
@@ -260,6 +329,8 @@ function destroy() {
                 </button>
             </template>
 
+            <FlashAlert class="mb-3" />
+
             <div v-if="defaults?.copied_from" class="mb-3 flex gap-2.5 rounded-lg bg-muted p-3 text-sm leading-relaxed text-muted-foreground">
                 <Repeat class="mt-0.5 size-4 shrink-0" />
                 <p>
@@ -269,8 +340,29 @@ function destroy() {
                 </p>
             </div>
 
-            <form class="grid gap-3 md:grid-cols-2 md:items-start md:gap-5" novalidate @submit.prevent="submit">
-                <div class="space-y-3">
+            <!-- 手機時兩欄外框不佔版面（contents），確認頁把「快速帶入」「備註」排到項目之後 -->
+            <form class="grid grid-cols-1 gap-3 md:grid-cols-2 md:items-start md:gap-5" novalidate @submit.prevent="submit">
+                <div class="contents md:block md:space-y-3">
+                    <section v-if="analysis" class="rounded-xl border bg-card p-4">
+                        <div class="flex items-center gap-3">
+                            <div class="grid size-16 shrink-0 place-items-center overflow-hidden rounded-[10px] bg-muted text-muted-foreground">
+                                <img v-if="thumbnail" :src="thumbnail" alt="餐點照片" class="size-full object-cover" />
+                                <ImageIcon v-else class="size-6" />
+                            </div>
+                            <div class="min-w-0">
+                                <p class="flex items-center gap-1.5 text-[15px] font-semibold">
+                                    <Sparkles class="size-4 text-primary" />辨識出 {{ analysis.item_count }} 個項目
+                                </p>
+                                <p class="mt-0.5 text-[13px] leading-normal text-muted-foreground">
+                                    數值是 AI 估算，請檢查後儲存。<template v-if="hasLowConfidence">標示「低」的項目建議特別確認。</template>
+                                </p>
+                            </div>
+                        </div>
+                        <p v-if="analysis.hint" class="mt-2.5 rounded-lg bg-muted px-3 py-2 text-[13px] text-muted-foreground">
+                            補充說明：{{ analysis.hint }}
+                        </p>
+                    </section>
+
                     <section class="space-y-3 rounded-xl border bg-card p-4">
                         <div class="grid grid-cols-2 gap-2.5">
                             <div class="min-w-0">
@@ -293,12 +385,15 @@ function destroy() {
                         <div>
                             <span class="mb-1 block text-xs text-muted-foreground">餐別</span>
                             <SegmentedControl v-model="form.meal_type" :options="meal_types" @update:model-value="typeChosen = true" />
-                            <p v-if="!typeChosen" class="mt-1.5 text-xs text-muted-foreground">依時間自動選擇，可以手動改。</p>
+                            <p v-if="analysis?.time_source === 'photo'" class="mt-1.5 flex items-center gap-1 text-xs text-muted-foreground">
+                                <ImageUp class="size-3.5" />時間依照片拍攝時間帶入，可以修改。
+                            </p>
+                            <p v-else-if="!typeChosen" class="mt-1.5 text-xs text-muted-foreground">依時間自動選擇，可以手動改。</p>
                             <InputError class="mt-1.5" :message="form.errors.meal_type" />
                         </div>
                     </section>
 
-                    <section class="rounded-xl border bg-card p-4">
+                    <section :class="['rounded-xl border bg-card p-4', analysis ? 'max-md:order-1' : '']">
                         <h2 class="mb-3 font-semibold">快速帶入</h2>
                         <FoodPicker
                             :today="today"
@@ -312,7 +407,7 @@ function destroy() {
                     </section>
                 </div>
 
-                <div class="space-y-3">
+                <div class="contents md:block md:space-y-3">
                     <section class="rounded-xl border bg-card p-4">
                         <h2 class="mb-3 flex items-center gap-2 font-semibold">
                             這一餐的項目
@@ -346,7 +441,7 @@ function destroy() {
                         </Button>
                     </section>
 
-                    <section class="rounded-xl border bg-card p-4">
+                    <section :class="['rounded-xl border bg-card p-4', analysis ? 'max-md:order-2' : '']">
                         <FieldLabel for="meal_note">備註</FieldLabel>
                         <textarea
                             id="meal_note"
@@ -361,6 +456,7 @@ function destroy() {
                 </div>
 
                 <div
+                    :class="analysis ? 'max-md:order-3' : ''"
                     class="sticky bottom-[calc(env(safe-area-inset-bottom)+4.75rem)] z-10 -mx-4 flex items-center gap-3 border-t bg-page/95 px-4 py-3 backdrop-blur md:static md:col-span-2 md:mx-0 md:border-0 md:bg-transparent md:px-0"
                 >
                     <div class="min-w-0">
@@ -373,6 +469,14 @@ function destroy() {
                     </Button>
                 </div>
             </form>
+
+            <ResponsiveDialog v-model:open="leaveOpen" title="放棄這次分析？">
+                <p class="text-sm text-muted-foreground">分析結果不會儲存，照片也不會留下。這次分析仍算在今天的次數內。</p>
+                <div class="mt-5 flex gap-2">
+                    <Button variant="outline" size="lg" class="h-11 flex-1" @click="leaveOpen = false">繼續編輯</Button>
+                    <Button size="lg" class="h-11 flex-1" @click="leave">放棄</Button>
+                </div>
+            </ResponsiveDialog>
 
             <ServingsDialog v-model:open="servingsOpen" :food="picking?.food ?? null" :servings="limits.servings" @add="addPicked" />
 
