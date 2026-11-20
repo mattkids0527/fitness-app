@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppPage from '@/components/AppPage.vue';
+import FieldLabel from '@/components/FieldLabel.vue';
 import InputError from '@/components/InputError.vue';
 import FoodPicker from '@/components/meal/FoodPicker.vue';
 import MealItemCard from '@/components/meal/MealItemCard.vue';
@@ -346,7 +347,7 @@ function destroy() {
                     </section>
 
                     <section class="rounded-xl border bg-card p-4">
-                        <label for="meal_note" class="mb-1 block text-xs text-muted-foreground">備註（選填）</label>
+                        <FieldLabel for="meal_note">備註</FieldLabel>
                         <textarea
                             id="meal_note"
                             v-model="form.note"

@@ -4,7 +4,7 @@
  * - /build/ 底下的檔案檔名含 hash、內容不會變，第一次載入後快取起來。
  * 修改此檔的快取策略時，記得調整 CACHE_VERSION，舊快取會在 activate 時清掉。
  */
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const STATIC_CACHE = `fitness-static-${CACHE_VERSION}`;
 const PRECACHE = ['/offline.html', '/favicon.svg', '/icons/icon-192.png'];
 

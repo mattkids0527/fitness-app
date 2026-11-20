@@ -3,7 +3,9 @@
 @tailwind utilities;
 
 body,
+/* 點兩下不放大（同時去掉點擊延遲）；兩指縮放的鎖定見 app.blade.php 與 app.ts */
 html {
+    touch-action: manipulation;
     --font-sans:
         'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 }

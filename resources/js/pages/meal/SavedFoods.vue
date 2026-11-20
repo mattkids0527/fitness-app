@@ -1,16 +1,20 @@
 <script setup lang="ts">
 import AppPage from '@/components/AppPage.vue';
+import FieldLabel from '@/components/FieldLabel.vue';
 import InputError from '@/components/InputError.vue';
+import MacroValues from '@/components/meal/MacroValues.vue';
 import ResponsiveDialog from '@/components/ResponsiveDialog.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import UnitInput from '@/components/UnitInput.vue';
 import { shortDate } from '@/composables/useDateFormat';
+import { NUTRIENTS } from '@/composables/useNutrients';
 import { formatGrams, formatKcal } from '@/composables/useNutritionFormat';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { SavedFood } from '@/types/meal';
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { Info, LoaderCircle, Plus, Star, Trash2 } from 'lucide-vue-next';
+import { onClickOutside, onKeyStroke } from '@vueuse/core';
+import { Flame, History, Info, LoaderCircle, Plus, Star, Trash2 } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 defineProps<{
@@ -18,17 +22,16 @@ defineProps<{
     saved_foods: SavedFood[];
 }>();
 
-const nutrients = [
-    { field: 'protein_g', label: '蛋白質' },
-    { field: 'carbs_g', label: '碳水' },
-    { field: 'fat_g', label: '脂肪' },
-    { field: 'fiber_g', label: '纖維' },
-] as const;
-
 const editing = ref<SavedFood | null>(null);
 const formOpen = ref(false);
 const confirmOpen = ref(false);
 const deleting = ref(false);
+
+// 頁首 ⓘ 說明：點外面或按 Esc 關閉
+const infoOpen = ref(false);
+const infoRef = ref<HTMLElement | null>(null);
+onClickOutside(infoRef, () => (infoOpen.value = false));
+onKeyStroke('Escape', () => (infoOpen.value = false));
 
 const form = useForm({
     name: '',
@@ -117,8 +120,27 @@ function destroy() {
             { title: '常用食物', href: route('fitness.meal.saved_foods.index') },
         ]"
     >
-        <AppPage title="常用食物" :description="`${saved_foods.length} 項 · 依最近使用排序`" :back-href="route('fitness.meal.index')" narrow>
+        <AppPage title="常用食物" :description="`${saved_foods.length} 項`" :back-href="route('fitness.meal.index')" narrow>
             <template #actions>
+                <div ref="infoRef" class="relative">
+                    <button
+                        type="button"
+                        :class="['grid size-10 place-items-center rounded-full text-primary hover:bg-muted', infoOpen ? 'bg-brand-soft' : '']"
+                        aria-label="說明"
+                        :aria-expanded="infoOpen"
+                        aria-controls="saved-foods-info"
+                        @click="infoOpen = !infoOpen"
+                    >
+                        <Info class="size-5" />
+                    </button>
+                    <div
+                        v-if="infoOpen"
+                        id="saved-foods-info"
+                        class="absolute right-0 top-12 z-20 w-64 rounded-lg border bg-card p-3 text-sm leading-relaxed shadow-lg"
+                    >
+                        依最近使用排序。記錄餐點時按項目旁的 ☆ 也能加入。數值以「一份」為準，帶入時可以選份數。
+                    </div>
+                </div>
                 <button
                     type="button"
                     class="grid size-10 place-items-center rounded-full text-primary hover:bg-muted"
@@ -129,22 +151,21 @@ function destroy() {
                 </button>
             </template>
 
-            <div class="flex gap-2.5 rounded-lg bg-muted p-3 text-sm leading-relaxed text-muted-foreground">
-                <Info class="mt-0.5 size-4 shrink-0" />
-                <p>記錄餐點時按項目旁的 ☆ 也能加入。數值以「一份」為準，帶入時可以選份數。</p>
-            </div>
-
-            <ul v-if="saved_foods.length" class="mt-3 overflow-hidden rounded-xl border bg-card">
+            <ul v-if="saved_foods.length" class="overflow-hidden rounded-xl border bg-card">
                 <li v-for="food in saved_foods" :key="food.id" class="border-b last:border-b-0">
                     <button type="button" class="flex w-full items-center gap-3 px-3.5 py-3 text-left hover:bg-muted/50" @click="openForm(food)">
                         <div class="min-w-0 flex-1">
                             <div class="font-semibold">{{ food.name }}</div>
                             <div class="text-xs text-muted-foreground">
-                                {{ food.portion || '1 份' }}<template v-if="food.grams !== null"> · {{ formatGrams(food.grams) }} g</template> ·
-                                蛋白質 {{ formatGrams(food.protein_g) }} · 碳水 {{ formatGrams(food.carbs_g) }} · 脂肪 {{ formatGrams(food.fat_g) }}
+                                {{ food.portion || '1 份' }}<template v-if="food.grams !== null"> · {{ formatGrams(food.grams) }} g</template>
                             </div>
-                            <div class="text-xs text-muted-foreground">
-                                {{ food.last_used_on ? `最近使用：${shortDate(food.last_used_on, today)}` : '還沒用過' }}
+                            <div class="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+                                <MacroValues :values="food" />
+                                <span v-if="food.last_used_on" class="inline-flex items-center gap-0.5">
+                                    <History class="size-3" aria-hidden="true" /><span class="sr-only">最近使用</span
+                                    >{{ shortDate(food.last_used_on, today) }}
+                                </span>
+                                <span v-else>還沒用過</span>
                             </div>
                         </div>
                         <div class="text-right font-bold tabular-nums">
@@ -164,10 +185,11 @@ function destroy() {
             <ResponsiveDialog v-model:open="formOpen" :title="editing ? '編輯常用食物' : '新增常用食物'" description="數值以「一份」為準。">
                 <form class="space-y-2.5" novalidate @submit.prevent="submit">
                     <div>
-                        <label for="saved_food_name" class="mb-1 block text-xs text-muted-foreground">名稱</label>
+                        <FieldLabel for="saved_food_name" required>名稱</FieldLabel>
                         <Input
                             id="saved_food_name"
                             v-model="form.name"
+                            aria-required="true"
                             maxlength="100"
                             placeholder="例如：茶葉蛋"
                             :class="['h-12', form.errors.name ? 'border-destructive' : '']"
@@ -176,25 +198,25 @@ function destroy() {
                     </div>
                     <div class="grid grid-cols-2 gap-2">
                         <div class="min-w-0">
-                            <label for="saved_food_portion" class="mb-1 block text-xs text-muted-foreground">份量描述（選填）</label>
+                            <FieldLabel for="saved_food_portion">份量描述</FieldLabel>
                             <Input id="saved_food_portion" v-model="form.portion" maxlength="50" placeholder="例如：1 顆" class="h-12" />
                         </div>
                         <div class="min-w-0">
-                            <label for="saved_food_grams" class="mb-1 block text-xs text-muted-foreground">重量（選填）</label>
+                            <FieldLabel for="saved_food_grams">重量</FieldLabel>
                             <UnitInput id="saved_food_grams" v-model="form.grams" unit="g" min="0" :invalid="!!form.errors.grams" />
                         </div>
                     </div>
                     <InputError :message="form.errors.portion ?? form.errors.grams" />
                     <div>
-                        <label for="saved_food_kcal" class="mb-1 block text-xs text-muted-foreground">熱量</label>
-                        <UnitInput id="saved_food_kcal" v-model="form.kcal" unit="kcal" min="0" :invalid="!!form.errors.kcal" />
+                        <FieldLabel for="saved_food_kcal" :icon="Flame" required>熱量</FieldLabel>
+                        <UnitInput id="saved_food_kcal" v-model="form.kcal" unit="kcal" min="0" aria-required="true" :invalid="!!form.errors.kcal" />
                         <InputError class="mt-1" :message="form.errors.kcal" />
                     </div>
                     <div class="grid grid-cols-2 gap-2">
-                        <div v-for="nutrient in nutrients" :key="nutrient.field" class="min-w-0">
-                            <label :for="`saved_food_${nutrient.field}`" class="mb-1 block text-xs text-muted-foreground"
-                                >{{ nutrient.label }}（選填）</label
-                            >
+                        <div v-for="nutrient in NUTRIENTS" :key="nutrient.field" class="min-w-0">
+                            <FieldLabel :for="`saved_food_${nutrient.field}`" :icon="nutrient.icon" :icon-class="nutrient.textClass">{{
+                                nutrient.label
+                            }}</FieldLabel>
                             <UnitInput
                                 :id="`saved_food_${nutrient.field}`"
                                 v-model="form[nutrient.field]"

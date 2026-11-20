@@ -17,7 +17,7 @@ const emit = defineEmits<{ menu: [] }>();
             <div class="min-w-0 flex-1">
                 <div class="truncate font-semibold">{{ meal.item_names.join('、') }}</div>
                 <div class="mt-0.5 truncate text-xs text-muted-foreground">
-                    {{ meal.time }} · {{ meal.item_names.length }} 個項目<template v-if="meal.note"> · {{ meal.note }}</template>
+                    {{ meal.time }}<template v-if="meal.note"> · {{ meal.note }}</template>
                 </div>
             </div>
             <span class="whitespace-nowrap font-bold tabular-nums">

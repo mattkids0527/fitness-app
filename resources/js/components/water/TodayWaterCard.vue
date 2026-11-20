@@ -16,8 +16,13 @@ const { openWaterSheet } = useQuickActions();
     <section class="rounded-xl border bg-card p-4">
         <h2 class="mb-3 flex items-center gap-2 font-semibold">
             <Droplet class="size-4 text-sky-500" /> 喝水
-            <button type="button" class="ml-auto flex items-center text-sm font-medium text-primary" @click="openWaterSheet">
-                紀錄<ChevronRight class="size-4" />
+            <button
+                type="button"
+                class="-my-1.5 ml-auto grid size-8 place-items-center rounded-full bg-brand-soft text-primary"
+                aria-label="喝水紀錄"
+                @click="openWaterSheet"
+            >
+                <ChevronRight class="size-4" />
             </button>
         </h2>
         <WaterProgress :water="water" />

@@ -2,7 +2,8 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+        {{-- 鎖住縮放：maximum-scale／user-scalable 擋 Android 兩指縮放；點兩下由 app.css 的 touch-action、iPhone 兩指縮放由 app.ts 處理 --}}
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 
         <title inertia>{{ config('app.name', 'Fitness') }}</title>
 

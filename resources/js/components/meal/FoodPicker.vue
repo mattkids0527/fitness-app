@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import MacroValues from '@/components/meal/MacroValues.vue';
 import SegmentedControl from '@/components/SegmentedControl.vue';
 import { shortDate } from '@/composables/useDateFormat';
-import { formatGrams, formatKcal } from '@/composables/useNutritionFormat';
+import { formatKcal } from '@/composables/useNutritionFormat';
 import type { FoodValues, MealDetail, MealType, MealTypeOption, RecentFood, SavedFood } from '@/types/meal';
 import { Copy, Plus } from 'lucide-vue-next';
 import { ref } from 'vue';
@@ -29,10 +30,9 @@ const tabs: { value: Tab; label: string }[] = [
 ];
 
 /**
- * 份量、熱量與三大營養素的一行摘要。
+ * 份量與熱量的摘要（三大營養素另以圖示顯示）。
  */
-const foodMeta = (food: FoodValues) =>
-    `${food.portion || '1 份'} · ${formatKcal(food.kcal)} kcal · 蛋白質 ${formatGrams(food.protein_g)} · 碳水 ${formatGrams(food.carbs_g)} · 脂肪 ${formatGrams(food.fat_g)}`;
+const foodMeta = (food: FoodValues) => `${food.portion || '1 份'} · ${formatKcal(food.kcal)} kcal`;
 
 /**
  * 餐別的中文名稱。
@@ -55,7 +55,10 @@ const typeLabel = (value: MealType) => props.mealTypes.find((type) => type.value
                 >
                     <div class="min-w-0 flex-1">
                         <div class="truncate text-sm font-semibold">{{ food.name }}</div>
-                        <div class="truncate text-xs text-muted-foreground">{{ foodMeta(food) }}</div>
+                        <div class="flex items-center gap-2 overflow-hidden whitespace-nowrap text-xs text-muted-foreground">
+                            <span class="truncate">{{ foodMeta(food) }}</span>
+                            <MacroValues :values="food" />
+                        </div>
                     </div>
                     <span class="grid size-7 shrink-0 place-items-center rounded-full bg-brand-soft text-primary"><Plus class="size-4" /></span>
                 </button>

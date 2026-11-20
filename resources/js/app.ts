@@ -39,6 +39,15 @@ createInertiaApp({
 // This will set light / dark mode on page load...
 initializeTheme();
 
+/**
+ * 擋下 iPhone Safari 的兩指縮放；Safari 會忽略 viewport 的 user-scalable=no。
+ */
+function preventPinchZoom() {
+    document.addEventListener('gesturestart', (event) => event.preventDefault());
+}
+
+preventPinchZoom();
+
 // 註冊 service worker（PWA）；開發模式不註冊，避免快取干擾 Vite 熱更新
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
     window.addEventListener('load', () => {

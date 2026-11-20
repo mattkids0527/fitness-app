@@ -21,9 +21,13 @@ const typeLabel = (value: MealType) => props.mealTypes.find((type) => type.value
     <section class="rounded-xl border bg-card p-4">
         <h2 class="mb-1 flex items-center gap-2 font-semibold">
             <Utensils class="size-4" /> 今日餐點
-            <Link :href="route('fitness.meal.index')" class="ml-auto flex items-center text-sm font-medium text-primary"
-                >飲食頁<ChevronRight class="size-4"
-            /></Link>
+            <Link
+                :href="route('fitness.meal.index')"
+                class="-my-1.5 ml-auto grid size-8 place-items-center rounded-full bg-brand-soft text-primary"
+                aria-label="飲食頁"
+            >
+                <ChevronRight class="size-4" />
+            </Link>
         </h2>
         <Link
             v-for="meal in meals"
@@ -33,7 +37,9 @@ const typeLabel = (value: MealType) => props.mealTypes.find((type) => type.value
         >
             <MealTypeIcon :type="meal.meal_type" />
             <div class="min-w-0 flex-1">
-                <div class="text-xs text-muted-foreground">{{ typeLabel(meal.meal_type) }} · {{ meal.time }}</div>
+                <div class="text-xs tabular-nums text-muted-foreground">
+                    <span class="sr-only">{{ typeLabel(meal.meal_type) }} </span>{{ meal.time }}
+                </div>
                 <div class="truncate text-sm font-semibold">{{ meal.item_names.join('、') }}</div>
             </div>
             <span class="whitespace-nowrap text-sm font-bold tabular-nums">

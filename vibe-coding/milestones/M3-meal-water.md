@@ -1,6 +1,6 @@
 # M3 飲食紀錄（手動）＋喝水
 
-- 狀態：實作完成（T1～T5，2026-11-20），待使用者開 PR 合併 `main`、部署並在正式站驗收後寫 handoff
+- 狀態：完成（2026-11-20，已合併 `main`、部署並在正式站驗收；交接見 [handoff](../handoffs/2026-11-20-M3-meal-water.md)）
 - 建立日期：2026-11-20
 - 分支：`develop`（每個 Task 完成就 commit 並 push；PR `develop` → `main` 由使用者開與合併）
 - 依據規格：[M3 飲食紀錄＋喝水規格](../specs/2026-11-20-m3-meal-water.md)、[專案總覽規格 v1.0](../specs/2026-11-19-project-overview.md) §3.3、§3.5
