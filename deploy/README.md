@@ -109,8 +109,12 @@ ssh-keygen -t ed25519 -f ~/.ssh/fitness_deploy -C fitness-deploy -N ""
 | SSL/TLS → Overview | 加密模式選 **Full** |
 | SSL/TLS → Edge Certificates | **Always Use HTTPS** 開啟 |
 | Speed → Optimization（或 Settings → Content Optimization） | **Rocket Loader** 關閉，它會改寫 `<script>`，可能讓 Vue 無法啟動 |
+| Caching → Configuration | **Browser Cache TTL** 選 **Respect Existing Headers** |
 
-快取不用另外設定：Cloudflare 會依照 nginx 給的 `Cache-Control` 決定，`/build/*` 長期快取，`sw.js`、manifest 和頁面都不快取。
+最後一項很重要。Cloudflare 預設會快取 `.js` 檔，並把瀏覽器快取時間改成 4 小時，蓋掉 nginx 給 `sw.js` 的 `no-cache`。改成 Respect Existing Headers 後，就完全照 nginx 的設定走：
+
+- `/build/*` 長期快取
+- `sw.js`、manifest 和頁面都不快取
 
 ## 5. 執行 `provision.sh`
 

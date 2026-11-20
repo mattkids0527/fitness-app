@@ -63,7 +63,7 @@ VM：cloudflared ──HTTP──▶ nginx（只聽 127.0.0.1:80）──▶ PHP
 |---|---|
 | Tunnel | Zero Trust → Networks → Tunnels 建立 `fitness-app`，Public Hostname 把 `wn52777.com` 指到 `http://127.0.0.1:80`；`www.wn52777.com` 也指過來，由 nginx 轉向不含 www 的網址 |
 | SSL/TLS | 加密模式設為 Full；開啟 Always Use HTTPS |
-| 快取 | 採用預設行為，Cloudflare 會依照 nginx 給的 `Cache-Control` 決定：`/build/*` 長期快取，`sw.js`、`manifest.webmanifest` 不快取，頁面（HTML）預設不快取 |
+| 快取 | Browser Cache TTL 設為 Respect Existing Headers，完全依照 nginx 給的 `Cache-Control`：`/build/*` 長期快取，`sw.js`、`manifest.webmanifest` 不快取，頁面（HTML）不快取。預設的 4 小時會蓋掉 `sw.js` 的 `no-cache`（第一次部署時實測發現） |
 | 其他 | 關閉 Rocket Loader，它會改寫 `<script>` 的載入方式，可能讓 Vue 無法啟動 |
 
 ### 3.5 正式環境的 Google 登入
