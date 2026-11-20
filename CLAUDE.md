@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 專案概述
 
-以 Laravel 12 官方 Vue Starter Kit 為基礎建立的手機優先飲食／健身紀錄應用（M1 帳號基礎已完成：首次設定、BMR／每日目標、體重紀錄、今日頁、底部 Tab 版型、PWA；M2 Google 登入已完成：設定頁綁定／解除 Google、以已綁定的 Google 帳號登入；D1 部署已完成：正式站 https://wn52777.com，GCP e2-micro + Cloudflare Tunnel，GitHub Actions 手動部署）。技術堆疊：Laravel 12 + Inertia.js 2 + Vue 3（TypeScript）+ Tailwind CSS 3 + shadcn-vue（radix-vue）+ Ziggy。資料庫為 PostgreSQL 16（以 `docker-compose.yml` 在本地起容器，對外 port 54329；開發庫 `fitness_app`、測試庫 `fitness_app_testing`）。語系 `zh_TW`（框架內建訊息在 `lang/zh_TW/`），時區 `Asia/Taipei`。
+以 Laravel 12 官方 Vue Starter Kit 為基礎建立的手機優先飲食／健身紀錄應用（M1 帳號基礎已完成：首次設定、BMR／每日目標、體重紀錄、今日頁、底部 Tab 版型、PWA；M2 Google 登入已完成：設定頁綁定／解除 Google、以已綁定的 Google 帳號登入；D1 部署已完成：正式站 https://wn52777.com，GCP e2-micro + Cloudflare Tunnel，GitHub Actions 手動部署；M3 飲食＋喝水已完成：手動記錄餐點、常用食物／最近吃過／複製整餐快速帶入、喝水面板與建議量、今日頁實際攝取）。技術堆疊：Laravel 12 + Inertia.js 2 + Vue 3（TypeScript）+ Tailwind CSS 3 + shadcn-vue（radix-vue）+ Ziggy。資料庫為 PostgreSQL 16（以 `docker-compose.yml` 在本地起容器，對外 port 54329；開發庫 `fitness_app`、測試庫 `fitness_app_testing`）。語系 `zh_TW`（框架內建訊息在 `lang/zh_TW/`），時區 `Asia/Taipei`。
 
 ## 常用指令
 
@@ -63,8 +63,8 @@ CI（`.github/workflows/`）在 push/PR 到 `main`、`develop` 時執行：`lint
 - `profile` 模組透過 HTTP Kernel 的 `appendMiddlewareToGroup()` 把 `EnsureProfileCompleted` 加到 `web` middleware 群組（不要改用 Router 的 `pushMiddlewareToGroup()`，Kernel 重新同步群組時會被蓋掉）：已登入但未完成首次設定（`users.onboarded_at` 為空）的使用者，所有頁面都會被導向 `/onboarding`。新增「未完成設定也要能進入」的路由時，把路由名稱加到 `config('fitness.profile.onboarding_except_routes')`。測試用的 `UserFactory` 預設為已完成設定，要測未完成狀態用 `->notOnboarded()`。
 
 ### 前端結構（`resources/js`，alias `@` → `resources/js`）
-- `pages/`：Inertia 頁面（`auth/`、`settings/`、`profile/`、`daily-summary/`、`social-login/`、`ComingSoon.vue`）。
-- 業務模組：`profile`（首次設定、BMR／每日目標、體重紀錄）、`daily-summary`（今日頁；發出收集型事件 `DailySummaryCollecting`，各模組以 listener `addSection()` 加入當日摘要，前端依 `sections.<key>` 顯示）、`social-login`（已連結帳號頁、登入頁的第三方按鈕 `components/social-login/SocialLoginButtons.vue`）。
+- `pages/`：Inertia 頁面（`auth/`、`settings/`、`profile/`、`daily-summary/`、`social-login/`、`meal/`、`ComingSoon.vue`）。
+- 業務模組：`profile`（首次設定、BMR／每日目標、體重紀錄）、`daily-summary`（今日頁；發出收集型事件 `DailySummaryCollecting`，各模組以 listener `addSection()` 加入當日摘要，前端依 `sections.<key>` 顯示）、`social-login`（已連結帳號頁、登入頁的第三方按鈕 `components/social-login/SocialLoginButtons.vue`）、`meal`（飲食頁、新增／編輯餐點、常用食物；`meals`／`meal_items`／`saved_foods`，依賴 profile 的 `UserCalendar` 切日與 `EnergyTargetCalculator`；份數換算在前端 `composables/useMealFood.ts`）、`water`（喝水面板 `components/water/WaterSheet.vue` 掛在 `AppSidebarLayout`，資料由模組 Provider 以 `Inertia::share('water', Inertia::optional(...))` 提供，打開面板時 `router.reload({ only: ['water'] })` 載入；建議量＝最新體重 × 35 ml）。
 - `layouts/`：頁面以 `AppLayout`（內部委派給 `layouts/app/AppSidebarLayout` 或 `AppHeaderLayout`）或 `AuthLayout`（委派給 `layouts/auth/*`）包裝；設定頁再套 `layouts/settings/Layout.vue`（分頁：個人帳號、密碼、外觀、已連結帳號；新增設定分頁改這裡的 `sidebarNavItems`）。切換整站版型時改這兩個入口檔即可。
 - `components/`：應用元件。版型：手機（< 768px）用 `AppBottomNav.vue` 底部 Tab，桌機用 `AppSidebar.vue` 側欄；`QuickAddDialog.vue`（＋選單）、`profile/WeightLogSheet.vue`、`AppToast.vue` 掛在 `layouts/app/AppSidebarLayout.vue`，開關狀態在 `composables/useQuickActions.ts`、`useToast.ts`。`ResponsiveDialog.vue` 手機為底部面板、桌機為置中對話框；`AppPage.vue` 是頁面標題＋內容容器。模組元件放 `components/<module>/`，型別放 `types/<module>.ts`。
 - 品牌色：橘色，`resources/css/app.css` 的 `--primary`（shadcn 預設按鈕即為橘色）、`--brand-soft`（選取狀態淺底，Tailwind `bg-brand-soft`）、`--page`（頁面底色，`bg-page`）。設計定稿在 `vibe-coding/ui/features/m1-account/`、`m2-google-login/`。
