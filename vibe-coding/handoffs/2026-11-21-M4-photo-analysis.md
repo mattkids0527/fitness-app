@@ -5,7 +5,7 @@
 - 依據規格：[M4 規格](../specs/2026-11-21-m4-photo-analysis.md)
 - 設計定稿：[ui/features/m4-photo-analysis](../ui/features/m4-photo-analysis/README.md)
 - 分支：`develop`
-- 目前進度：T1 demo、T2 `food-analyzer` 核心、T3 Gemini driver 與模型實測、T4 meal 模組後端、T5 前端完成。下一步是 T6（測試，先把情境條列給使用者確認）。
+- 目前進度：T1 demo、T2 `food-analyzer` 核心、T3 Gemini driver 與模型實測、T4 meal 模組後端、T5 前端、T6 測試完成。下一步是 T7（文件、`PRODUCTION_ENV`、部署 `v1.4.0` 與正式站驗收）。
 
 ## 下次接手從這裡開始
 
@@ -69,7 +69,21 @@
 - 本地驗證用無頭 Chromium（`~/.cache/ms-playwright/chromium-1234` ＋ scratchpad 的 `playwright-core`），Chrome 擴充當時沒連上。真實呼叫 Gemini 一次（非食物圖 → 看不出食物）；本地 `food_analyses` id 5 仍是未使用的成功分析，可以直接開 `/meals/create?analysis=5` 看確認頁。
 - 專案的 `vue-tsc` 本來就有很多型別錯誤（`useForm` 與 `SharedData` 型別），這次沒有新增不同種類的錯誤；CI 只跑 build、lint、format。
 
-## T6 測試情境參考
+## T6 完成內容（2026-11-21）
+
+- 情境 31 條，使用者確認後記錄在 [tests/2026-11-21-photo-analysis.md](../tests/2026-11-21-photo-analysis.md)，`tests/index.md` 已加一條。
+- 測試檔：`food-analyzer/tests/Feature/FoodAnalysisServiceTest.php`（10）、`food-analyzer/tests/Unit/FoodItemTest.php`（1）、`food-analyzer-gemini/tests/Feature/GeminiDriverTest.php`（7，`Http::fakeSequence` 假造 Gemini 回應、`preventStrayRequests`）、`meal/tests/Feature/MealAnalysisTest.php`（14）。
+- 全部 PHPUnit 159 個通過，`pint --test` 通過。沒有改到正式程式碼。
+- 注意：Gemini 回應不是 JSON 時，Prism 先丟解碼錯誤，driver 轉成「分析失敗」但 `llm_logs` 沒有原始文字（只有錯誤訊息）。之後若要除錯這種情況，可在 driver 另外接 `PrismStructuredDecodingException`。
+
+## T7 要做的事
+
+- `CLAUDE.md`：專案概述加 M4、模組清單加 `llm-log`、`food-analyzer`、`food-analyzer-gemini`，`.env` 項目（`GEMINI_*`、`FOOD_ANALYZER_*`）。
+- `deploy/README.md`：Gemini 設定與金鑰申請連結（模組 README）。
+- 使用者在 GitHub Secret `PRODUCTION_ENV` 加入 `GEMINI_API_KEY`、`GEMINI_MODEL=gemini-3.1-flash-lite`、`GEMINI_THINKING_LEVEL=low`、`FOOD_ANALYZER_DRIVER=gemini`、`FOOD_ANALYZER_DAILY_LIMIT=20`、`FOOD_ANALYZER_TIMEOUT=25`，開 PR `develop` → `main` 合併後以 `v1.4.0` 部署。
+- 正式站驗收：iPhone 拍照與上傳（拍攝時間帶入）、Android、桌機上傳、失敗重試、次數顯示、確認存檔、飲食頁「照片」。
+
+## T6 測試情境參考（T4 時的草稿，已併入正式情境）
 
 T4 時在 scratchpad 寫過一支不進 repo 的 HTTP 流程測試（Fake driver，全部通過），T6 可以從這些情境出發，再補 `food-analyzer` 單元與 Gemini driver（Prism fake）的情境，條列給使用者確認後再寫：
 
