@@ -1,12 +1,21 @@
 name: deploy
 
-# 手動部署：到 Actions → deploy → Run workflow，分支選 main 後執行。
+# 手動部署：到 Actions → deploy → Run workflow，分支選 main、填版號（例如 v1.3.0）後執行。
+# 部署成功後在該 commit 打 tag 並建立 GitHub Release；部署失敗不打 tag，同一個版號可以修好後再用。
 # 部署目標與正式環境 .env 都從 Environment「production」讀取，設定方式見 deploy/README.md。
+run-name: deploy ${{ inputs.version }}
+
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: '版號（vX.Y.Z）。新功能升中間碼，修正與調整升最後一碼'
+        required: true
+        type: string
 
+# 打 tag、建立 Release 需要寫入權限
 permissions:
-  contents: read
+  contents: write
 
 # 同一時間只允許一個部署；後來觸發的會排隊，不會中斷正在進行的部署
 concurrency:
@@ -21,6 +30,8 @@ jobs:
 
     env:
       DEPLOY_HOST: ${{ vars.DEPLOY_HOST || secrets.DEPLOY_HOST }}
+      # 版號一律透過環境變數使用，不直接嵌進指令，避免輸入內容被當成指令執行
+      DEPLOY_VERSION: ${{ inputs.version }}
 
     steps:
       - name: Only deploy main
@@ -44,8 +55,14 @@ jobs:
             exit 1
           fi
 
+      # 抓取完整歷史與所有 tag，才能檢查版號是否重複、是否大於目前最新版
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check Version
+        run: deploy/check-version.sh "$DEPLOY_VERSION"
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -106,8 +123,19 @@ jobs:
             echo "DEPLOY_ENV_FILE=$dir/production.env"
           } >> "$GITHUB_ENV"
 
+      # 固定部署觸發當下的 commit，避免 VM 拉到之後才合併進 main 的程式碼
       - name: Deploy
-        run: vendor/bin/dep deploy --no-interaction -v
+        run: vendor/bin/dep deploy --no-interaction -v --revision="$GITHUB_SHA"
+
+      # 部署成功才打 tag；Release 說明由 GitHub 依上一版之後合併的 PR 自動產生
+      - name: Tag and Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            tag -a "$DEPLOY_VERSION" -m "Release $DEPLOY_VERSION" "$GITHUB_SHA"
+          git push origin "refs/tags/$DEPLOY_VERSION"
+          gh release create "$DEPLOY_VERSION" --verify-tag --title "$DEPLOY_VERSION" --generate-notes
 
       - name: Clean Up Secrets
         if: always()
