@@ -3,7 +3,7 @@
 - 更新日期：2026-11-20
 - 對應任務：[M2 Google 登入](../milestones/M2-google-login.md)
 - 分支：`milestone/M2-google-login`
-- 目前進度：T1～T3、T4-1 完成；下一步 T4-2 登入頁與回呼提示。
+- 目前進度：T1～T4 完成（T4 的真實 Google 點擊驗收待使用者建立憑證）；下一步 T5 測試，先列情境給使用者確認。
 
 ## 下次接手從這裡開始
 
@@ -47,5 +47,12 @@
 - `types/social-login.ts`：`SocialProviderOption`、`SocialLoginSharedData`、`LinkedSocialAccount`、`ConnectedProvider`。
 - `layouts/settings/Layout.vue`：加「已連結帳號」分頁、說明改為「管理帳號、密碼、外觀與已連結帳號」、選取樣式改 `bg-brand-soft text-primary`（其他分頁一併套用）。
 - `pages/profile/Show.vue`：「已連結帳號」列改為連到已連結帳號頁。**與 demo 不同**：右側不顯示「Google／未連結」——那需要每頁多一次查詢或讓 profile 依賴 social-login，而且同區塊的「外觀」列也只有箭頭，保持一致。
-- 解除連結、連結結果的提示（Toast／錯誤提示框）尚未接上，由 T4-2 以共享的 `flash` 處理。
 - 驗證：`npm run build`、`lint`、`format:check` 通過；以暫時帳號在 390px（淺色）與 1280px（深色）檢查已連結、解除確認面板、解除後未連結、我的頁入口，暫時帳號已刪除。
+
+## T4-2 登入頁與回呼提示
+
+- `components/social-login/SocialLoginButtons.vue`：讀共享的 `social_login.providers`，顯示「或」分隔線與「使用 {label} 帳戶登入」按鈕（Google 品牌樣式，深色模式深底）；沒有可用 provider 時整塊不顯示。以一般 `<a>` 整頁跳轉。
+- `components/FlashAlert.vue`（跨模組共用）：顯示 `flash.error` 的標題與說明；用在登入頁與已連結帳號頁。
+- `components/AppToast.vue`：監看 `page.props.flash`，有 `success` 就顯示 Toast（每次回應都是新的 flash 物件，同樣文字連續出現也會顯示）。登入頁（AuthLayout）沒有 AppToast，成功登入不需要提示。
+- 驗證：以假憑證起 server，Playwright 攔截 accounts.google.com 後模擬 `?error=access_denied` 回來——登入頁與已連結帳號頁都顯示對應錯誤提示框、重新整理後消失；解除連結後顯示「已解除連結 Google」Toast；未設定憑證時登入頁沒有分隔線與 Google 按鈕。390px 淺色、1280px 深色檢查過。build、lint、format:check、Pint、67 tests 通過。
+- **尚未做**：實際用 Google 帳號走完「帳密登入 → 連結 Google → 登出 → Google 登入 → 解除連結 → Google 登入被拒」，需使用者先依 `social-login-google` README 建立憑證並修正 `APP_URL`（見上方「下次接手」第 3 點）。

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import FlashAlert from '@/components/FlashAlert.vue';
 import HeadingSmall from '@/components/HeadingSmall.vue';
 import ResponsiveDialog from '@/components/ResponsiveDialog.vue';
 import ConnectedAccountItem from '@/components/social-login/ConnectedAccountItem.vue';
@@ -35,7 +36,7 @@ function askUnlink(provider: ConnectedProvider) {
 }
 
 /**
- * 解除選定平台的連結；結果提示由後端 flash 帶回。
+ * 解除選定平台的連結；成功提示由後端 flash 帶回、AppToast 顯示。
  */
 function unlink() {
     if (!unlinking.value) {
@@ -60,6 +61,8 @@ function unlink() {
         <SettingsLayout>
             <div class="space-y-5">
                 <HeadingSmall title="已連結帳號" description="連結後可以直接用該帳號登入，不必輸入密碼。" />
+
+                <FlashAlert />
 
                 <template v-if="providers.length">
                     <div class="divide-y overflow-hidden rounded-xl border bg-card">
