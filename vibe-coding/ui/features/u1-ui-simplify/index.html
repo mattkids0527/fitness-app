@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+    <head>
+        <meta charset="utf-8" />
+        <!-- 縮放鎖定：Android 以 maximum-scale／user-scalable 擋兩指縮放；點兩下由 CSS touch-action 處理；iOS 由 app.js 擋 gesturestart -->
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+        <title>U1 介面精簡 demo</title>
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+        <header class="toolbar">
+            <h1>U1 介面精簡：原本 ↔ 改後</h1>
+            <div class="group">
+                <span class="group-label">主題</span>
+                <button data-theme-btn="light" class="on">淺色</button>
+                <button data-theme-btn="dark">深色</button>
+            </div>
+            <div class="group">
+                <span class="group-label">顯示</span>
+                <button data-view-btn="both" class="on">對照</button>
+                <button data-view-btn="after">只看改後</button>
+            </div>
+        </header>
+
+        <main id="app"></main>
+
+        <script src="icons.js"></script>
+        <script src="app.js"></script>
+    </body>
+</html>
