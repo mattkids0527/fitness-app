@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import MissingNutrientsNotice from '@/components/meal/MissingNutrientsNotice.vue';
+import NutrientGrid from '@/components/meal/NutrientGrid.vue';
 import { shortDate } from '@/composables/useDateFormat';
-import { formatGrams, formatKcal } from '@/composables/useNutritionFormat';
+import { formatKcal } from '@/composables/useNutritionFormat';
 import type { NutritionTotals } from '@/types/meal';
 import { Utensils } from 'lucide-vue-next';
 import { computed } from 'vue';
@@ -14,12 +15,6 @@ const props = defineProps<{
     hasMissingNutrients: boolean;
 }>();
 
-const nutrients = computed(() => [
-    { label: '蛋白質', value: props.totals.protein_g },
-    { label: '碳水', value: props.totals.carbs_g },
-    { label: '脂肪', value: props.totals.fat_g },
-    { label: '纖維', value: props.totals.fiber_g },
-]);
 const over = computed(() => props.calorieTarget !== null && props.totals.kcal > props.calorieTarget);
 const progress = computed(() => (props.calorieTarget ? Math.min(100, (props.totals.kcal / props.calorieTarget) * 100) : 0));
 </script>
@@ -41,14 +36,7 @@ const progress = computed(() => (props.calorieTarget ? Math.min(100, (props.tota
                 {{ over ? `超過 ${formatKcal(totals.kcal - calorieTarget)} kcal` : `還可以吃 ${formatKcal(calorieTarget - totals.kcal)} kcal` }}
             </p>
         </template>
-        <div class="mt-3 grid grid-cols-4 gap-1.5">
-            <div v-for="nutrient in nutrients" :key="nutrient.label" class="rounded-lg bg-muted px-1.5 py-2 text-center">
-                <div class="text-[11px] text-muted-foreground">{{ nutrient.label }}</div>
-                <div class="mt-0.5 font-bold tabular-nums">
-                    {{ formatGrams(nutrient.value) }}<small class="text-[11px] font-medium text-muted-foreground">g</small>
-                </div>
-            </div>
-        </div>
+        <NutrientGrid class="mt-3" :values="totals" />
         <MissingNutrientsNotice v-if="hasMissingNutrients" />
     </section>
 </template>

@@ -42,6 +42,19 @@ class MealRequest extends FormRequest
     }
 
     /**
+     * 沒有任何項目時的訊息。
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'items.required' => trans('FitnessMeal::errors.items_required'),
+            'items.min' => trans('FitnessMeal::errors.items_required'),
+        ];
+    }
+
+    /**
      * 欄位中文名稱。
      *
      * @return array<string, string>
