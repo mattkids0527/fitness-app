@@ -1,6 +1,6 @@
 # U1 介面精簡
 
-- 狀態：實作完成（T1～T4，2026-11-20），待使用者開 PR 合併 `main`、部署並在正式站驗收（含實機測縮放）後寫 handoff
+- 狀態：完成（2026-11-21，已合併 `main`、部署並在正式站驗收，含手機實測縮放；交接見 [handoff](../handoffs/2026-11-21-U1-ui-simplify.md)）
 - 建立日期：2026-11-20
 - 分支：`develop`（每個 Task 完成就 commit 並 push；PR `develop` → `main` 由使用者開與合併）
 - 依據規格：[U1 介面精簡規格](../specs/2026-11-20-u1-ui-simplify.md)
