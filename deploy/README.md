@@ -379,7 +379,23 @@ DEPLOY_HOST=<VM 外部 IP> vendor/bin/dep deploy:unlock
 ssh -t -i ~/.ssh/fitness_deploy deploy@<VM 外部 IP> "cd /var/www/fitness-app/current && php artisan user:create --generate-password"
 ```
 
-指令會互動詢問姓名和 email，最後印出產生的密碼，請自行妥善保存。忘記密碼時，可以改用 `php artisan user:password <email> --generate-password` 重設。
+指令會互動詢問姓名和 email，最後印出產生的密碼，請自行妥善保存。
+
+**重設密碼**（在你的電腦上執行）：
+
+```bash
+ssh -t -i ~/.ssh/fitness_deploy deploy@<VM 外部 IP> "cd /var/www/fitness-app/current && php artisan user:password <email>"
+```
+
+不加 `--generate-password` 時會請你輸入兩次新密碼；加上的話會隨機產生密碼並只顯示一次。
+
+> **在 VM 上執行 `php artisan` 一律用 `deploy` 帳號。** 如果是從瀏覽器版 SSH（你自己的帳號）操作，請先 `cd /var/www/fitness-app/current`，再用 `sudo -u deploy php artisan ...` 執行，例如：
+>
+> ```bash
+> sudo -u deploy php artisan user:password <email>
+> ```
+>
+> 用自己的帳號或 root 直接執行，可能會在 `storage/` 留下不屬於 `deploy` 的 log 或快取檔，網站寫不進去就會出錯。用 `sudo find /var/www/fitness-app/shared/storage ! -user deploy` 可以檢查，沒有輸出才是正常的。
 
 ## 疑難排解
 
