@@ -66,3 +66,10 @@
   - 唯一鍵競態（sl-10）以 Repository 子類別在「檢查通過後」插入搶先的一筆；已確認拿掉 `DB::transaction` savepoint 時此測試會因 PostgreSQL「current transaction is aborted」失敗。
 - Google driver：`packages/fitness/social-login-google/tests/Feature/GoogleDriverTest`，以 Guzzle `MockHandler` 模擬 token／userinfo，不連外。為此 driver 新增設定 `guzzle`（預設逾時 10 秒，env `GOOGLE_HTTP_TIMEOUT`），測試以 `handler` 注入。
 - 結果：全部 91 tests（647 assertions）通過、無 skip；Pint、Prettier、ESLint、`npm run build` 通過。
+
+## 額外：本地開發帳號（使用者要求，M2 範圍外）
+
+- `database/seeders/DevAccountSeeder.php`：`php artisan db:seed` 時只在 `APP_ENV=local` 建立／更新開發帳號，帳密讀 `config('auth.dev_account')`（`.env` 的 `DEV_ACCOUNT_NAME`／`EMAIL`／`PASSWORD`，不進 git；`.env.example` 只留空欄位）。尚未完成首次設定時以 profile 模組的 `OnboardingService` 填入範例資料（男、1990-01-01、175 cm、75 kg、輕度、維持），可重複執行不會重複新增體重。
+- `DatabaseSeeder` 改為只呼叫 `DevAccountSeeder`（移除 starter kit 的 Test User）。
+- 本機 `.env` 已填入使用者指定的帳號並執行過 seed（ID 10）。
+- 尚無自動測試；若要補，情境需先給使用者確認。

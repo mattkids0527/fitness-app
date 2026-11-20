@@ -36,6 +36,15 @@ return [
     'password_reset_enabled' => (bool) env('AUTH_PASSWORD_RESET_ENABLED', false),
 
     /*
+    | 本地開發用的固定帳號，由 DevAccountSeeder 在 APP_ENV=local 時建立；帳密只放 .env，不進 git。
+    */
+    'dev_account' => [
+        'name' => env('DEV_ACCOUNT_NAME'),
+        'email' => env('DEV_ACCOUNT_EMAIL'),
+        'password' => env('DEV_ACCOUNT_PASSWORD'),
+    ],
+
+    /*
     |--------------------------------------------------------------------------
     | Authentication Guards
     |--------------------------------------------------------------------------

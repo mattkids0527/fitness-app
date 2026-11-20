@@ -30,6 +30,7 @@ vendor/bin/pint
 # 帳號（第一版不開放註冊，帳號以指令建立；目前沒有寄信設定，忘記密碼改用指令重設）
 php artisan user:create --name="王小明" --email=ming@example.com --generate-password   # 缺的欄位會互動詢問
 php artisan user:password ming@example.com --generate-password
+php artisan db:seed          # 本地開發帳號（只在 APP_ENV=local；帳密讀 .env 的 DEV_ACCOUNT_*，已完成首次設定，可重複執行）
 
 # 測試（PHPUnit；使用 PostgreSQL 的 fitness_app_testing，需先 docker compose up -d）
 ./vendor/bin/phpunit
