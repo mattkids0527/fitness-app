@@ -3,6 +3,7 @@
 namespace Fitness\Meal\Listeners;
 
 use Fitness\DailySummary\Events\DailySummaryCollecting;
+use Fitness\Meal\Enums\MealType;
 use Fitness\Meal\Models\Meal;
 use Fitness\Meal\Services\MealPresenter;
 use Fitness\Meal\Services\MealService;
@@ -21,7 +22,7 @@ class AddMealDailySummary
     ) {}
 
     /**
-     * 加入 meal 區塊：totals、has_missing_nutrients、meals（依時間由早到晚）。
+     * 加入 meal 區塊：totals、has_missing_nutrients、meals（依時間由早到晚）、meal_types（餐別名稱）。
      */
     public function handle(DailySummaryCollecting $event): void
     {
@@ -33,6 +34,7 @@ class AddMealDailySummary
             'totals' => $summary['totals'],
             'has_missing_nutrients' => $summary['has_missing_nutrients'],
             'meals' => $meals->map(fn (Meal $meal) => $this->presenter->summary($meal, $timezone))->values()->all(),
+            'meal_types' => MealType::options(),
         ]);
     }
 }

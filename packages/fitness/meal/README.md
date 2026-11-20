@@ -74,4 +74,4 @@
 
 ### Listeners
 
-- `AddMealDailySummary`：監聽 `DailySummaryCollecting`，加入 `meal` 區塊（`totals`、`has_missing_nutrients`、`meals`）
+- `AddMealDailySummary`：監聽 `DailySummaryCollecting`，加入 `meal` 區塊（`totals`、`has_missing_nutrients`、`meals`、`meal_types`）

@@ -268,7 +268,7 @@ function destroy() {
                 </p>
             </div>
 
-            <form class="grid gap-3 md:grid-cols-2 md:items-start md:gap-5" @submit.prevent="submit">
+            <form class="grid gap-3 md:grid-cols-2 md:items-start md:gap-5" novalidate @submit.prevent="submit">
                 <div class="space-y-3">
                     <section class="space-y-3 rounded-xl border bg-card p-4">
                         <div class="grid grid-cols-2 gap-2.5">

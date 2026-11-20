@@ -172,6 +172,7 @@ meal: {
     totals: { kcal: number; protein_g: number; carbs_g: number; fat_g: number; fiber_g: number };
     has_missing_nutrients: boolean;
     meals: { id: number; date: string; time: string; meal_type: MealType; note: string | null; kcal: number; item_names: string[] }[]; // date、time 為使用者時區
+    meal_types: { value: MealType; label: string; default_time: string; hours: [number, number] | null }[]; // 餐別名稱
 }
 // water 模組加入
 water: {

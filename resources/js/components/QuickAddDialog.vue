@@ -1,35 +1,53 @@
 <script setup lang="ts">
 import ResponsiveDialog from '@/components/ResponsiveDialog.vue';
 import { useQuickActions } from '@/composables/useQuickActions';
+import { Link } from '@inertiajs/vue3';
 import { Camera, ChevronRight, Droplet, Dumbbell, Pencil, Weight } from 'lucide-vue-next';
 
-const { quickAddOpen, openWeightSheet } = useQuickActions();
-
-// 尚未實作的項目，之後各模組完成時改成可點
-const comingSoon = [
-    { title: '拍照分析', description: 'AI 估算營養素', icon: Camera },
-    { title: '手動記錄', description: '輸入餐點內容', icon: Pencil },
-    { title: '健身', description: '有氧、重訓', icon: Dumbbell },
-    { title: '喝水', description: '+250 / +500 ml', icon: Droplet },
-];
+const { quickAddOpen, openWeightSheet, openWaterSheet } = useQuickActions();
 </script>
 
 <template>
     <ResponsiveDialog v-model:open="quickAddOpen" title="快速新增" description="選擇要記錄的項目">
         <div class="grid grid-cols-2 gap-2.5">
-            <div
-                v-for="item in comingSoon"
-                :key="item.title"
-                class="relative flex flex-col gap-2.5 rounded-xl border bg-card p-3.5 text-muted-foreground"
-                aria-disabled="true"
-            >
+            <div class="relative flex flex-col gap-2.5 rounded-xl border bg-card p-3.5 text-muted-foreground" aria-disabled="true">
                 <span class="absolute right-3 top-3 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold">即將推出</span>
-                <span class="grid size-10 place-items-center rounded-xl bg-muted"><component :is="item.icon" class="size-5" /></span>
+                <span class="grid size-10 place-items-center rounded-xl bg-muted"><Camera class="size-5" /></span>
                 <div>
-                    <div class="font-semibold">{{ item.title }}</div>
-                    <div class="text-xs">{{ item.description }}</div>
+                    <div class="font-semibold">拍照分析</div>
+                    <div class="text-xs">AI 估算營養素</div>
                 </div>
             </div>
+            <Link
+                :href="route('fitness.meal.create')"
+                class="flex flex-col gap-2.5 rounded-xl border bg-card p-3.5 text-left transition-colors hover:bg-brand-soft"
+                @click="quickAddOpen = false"
+            >
+                <span class="grid size-10 place-items-center rounded-xl bg-brand-soft text-primary"><Pencil class="size-5" /></span>
+                <div>
+                    <div class="font-semibold">手動記錄</div>
+                    <div class="text-xs text-muted-foreground">輸入餐點內容</div>
+                </div>
+            </Link>
+            <div class="relative flex flex-col gap-2.5 rounded-xl border bg-card p-3.5 text-muted-foreground" aria-disabled="true">
+                <span class="absolute right-3 top-3 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold">即將推出</span>
+                <span class="grid size-10 place-items-center rounded-xl bg-muted"><Dumbbell class="size-5" /></span>
+                <div>
+                    <div class="font-semibold">健身</div>
+                    <div class="text-xs">有氧、重訓</div>
+                </div>
+            </div>
+            <button
+                type="button"
+                class="flex flex-col gap-2.5 rounded-xl border bg-card p-3.5 text-left transition-colors hover:bg-brand-soft"
+                @click="openWaterSheet"
+            >
+                <span class="grid size-10 place-items-center rounded-xl bg-brand-soft text-primary"><Droplet class="size-5" /></span>
+                <div>
+                    <div class="font-semibold">喝水</div>
+                    <div class="text-xs text-muted-foreground">+250 / +500 ml</div>
+                </div>
+            </button>
             <button
                 type="button"
                 class="col-span-2 flex items-center gap-3 rounded-xl border bg-card p-3.5 text-left transition-colors hover:bg-brand-soft"

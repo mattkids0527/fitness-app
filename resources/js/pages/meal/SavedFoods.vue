@@ -162,7 +162,7 @@ function destroy() {
             </div>
 
             <ResponsiveDialog v-model:open="formOpen" :title="editing ? '編輯常用食物' : '新增常用食物'" description="數值以「一份」為準。">
-                <form class="space-y-2.5" @submit.prevent="submit">
+                <form class="space-y-2.5" novalidate @submit.prevent="submit">
                     <div>
                         <label for="saved_food_name" class="mb-1 block text-xs text-muted-foreground">名稱</label>
                         <Input

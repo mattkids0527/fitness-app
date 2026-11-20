@@ -86,3 +86,11 @@ export interface MealFormItem {
     saved_food_id: number | null;
     open: boolean;
 }
+
+/** meal 模組加入今日頁的區塊。 */
+export interface MealSummarySection {
+    totals: NutritionTotals;
+    has_missing_nutrients: boolean;
+    meals: MealSummary[];
+    meal_types: MealTypeOption[];
+}
