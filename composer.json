@@ -32,6 +32,7 @@
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/",
             "Fitness\\DailySummary\\": "packages/fitness/daily-summary/src/",
+            "Fitness\\Meal\\": "packages/fitness/meal/src/",
             "Fitness\\Profile\\": "packages/fitness/profile/src/",
             "Fitness\\SocialLogin\\": "packages/fitness/social-login/src/",
             "Fitness\\SocialLoginGoogle\\": "packages/fitness/social-login-google/src/"
@@ -44,6 +45,7 @@
         "psr-4": {
             "Tests\\": "tests/",
             "Fitness\\DailySummary\\Tests\\": "packages/fitness/daily-summary/tests/",
+            "Fitness\\Meal\\Tests\\": "packages/fitness/meal/tests/",
             "Fitness\\Profile\\Tests\\": "packages/fitness/profile/tests/",
             "Fitness\\SocialLogin\\Tests\\": "packages/fitness/social-login/tests/",
             "Fitness\\SocialLoginGoogle\\Tests\\": "packages/fitness/social-login-google/tests/"

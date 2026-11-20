@@ -54,7 +54,7 @@ CI（`.github/workflows/`）在 push/PR 到 `main`、`develop` 時執行：`lint
 
 ### 後端 → 前端：Inertia
 - 沒有獨立 API；controller / route closure 透過 `Inertia::render('路徑/Page', $props)` 回傳頁面，元件名稱對應 `resources/js/pages/{name}.vue`（解析邏輯在 `resources/js/app.ts`）。
-- 路由分檔：`routes/web.php`（入口：`/` 未登入導向登入、已登入導向今日頁 `/today`；暫放 `/meals`、`/workouts` 的「即將推出」頁，飲食／健身模組完成後移除）、`routes/auth.php`（登入/註冊/密碼重設/信箱驗證）、`routes/settings.php`（帳號資料、密碼、外觀設定）。業務路由在各模組的 `src/routes/web.php`。
+- 路由分檔：`routes/web.php`（入口：`/` 未登入導向登入、已登入導向今日頁 `/today`；暫放 `/workouts` 的「即將推出」頁，健身模組完成後移除）、`routes/auth.php`（登入/註冊/密碼重設/信箱驗證）、`routes/settings.php`（帳號資料、密碼、外觀設定）。業務路由在各模組的 `src/routes/web.php`。
 - 註冊預設關閉：`config('auth.registration_enabled')`（`AUTH_REGISTRATION_ENABLED`）為 false 時不註冊 `register` 路由；`config('auth.password_reset_enabled')`（`AUTH_PASSWORD_RESET_ENABLED`）控制登入頁是否顯示「忘記密碼」。登入後首頁是 `fitness.daily_summary.show`（starter kit 原本的 `dashboard` 已移除）。
 - 全域共享 props 定義在 `app/Http/Middleware/HandleInertiaRequests.php::share()`（`name`、`quote`、`auth.user`、`flash`），對應的 TS 型別在 `resources/js/types/index.ts`（`SharedData`、`Flash`、`User`、`BreadcrumbItem`、`NavItem`）。修改共享資料時兩邊要同步。模組自己的共享資料由模組 Provider 以 `Inertia::share()` 加入（例如 `social_login.providers`，型別在 `types/<module>.ts`），`app/` 不依賴模組。
 - 一次性結果訊息：redirect 時 `->with('success', '文字')` 由 `AppToast` 顯示；`->with('error', ['title' => ..., 'message' => ...])` 由 `components/FlashAlert.vue` 在頁面內顯示（放在需要的頁面，例如登入頁、已連結帳號頁）。

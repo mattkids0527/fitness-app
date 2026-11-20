@@ -1,6 +1,6 @@
 # M3 飲食紀錄（手動）＋喝水
 
-- 狀態：進行中（T1 完成，Task 拆分待使用者確認）
+- 狀態：進行中（T1、T2 完成）
 - 建立日期：2026-11-20
 - 分支：`develop`（每個 Task 完成就 commit 並 push；PR `develop` → `main` 由使用者開與合併）
 - 依據規格：[M3 飲食紀錄＋喝水規格](../specs/2026-11-20-m3-meal-water.md)、[專案總覽規格 v1.0](../specs/2026-11-19-project-overview.md) §3.3、§3.5
@@ -40,7 +40,8 @@
 - 路由與 Controller（規格 §6.1）：只能存取自己的資料，別人的 404；`create`／`edit` 的 props 帶常用食物、最近吃過、可複製的餐點與 `copy_from` 預填內容
 - 監聽 `DailySummaryCollecting` 加入 `meal` 區塊（規格 §8）
 - 語系 `FitnessMeal::`；設定檔 `config/fitness/meal.php`（最近吃過天數與筆數、複製整餐天數、項目上限、份數選項）
-- 移除 `routes/web.php` 的 `/meals` 即將推出路由
+- 移除 `routes/web.php` 的 `/meals` 即將推出路由（路徑與 `fitness.meal.index` 相同）；底部 Tab／側欄的「飲食」改指向 `fitness.meal.index`，`ComingSoonTest` 只留健身。T4-1 完成前點「飲食」會因頁面元件不存在而出錯，只影響 develop 本地開發
+- 實作補充：份數換算在前端完成，後端收到換算後的數值；meal 依賴 profile 的 `UserCalendar` 與 `EnergyTargetCalculator`（規格 §3 已同步）
 **完成條件**：程式碼檢視符合寫作規範；`php artisan migrate:fresh --seed` 成功；`route:list` 看得到 `fitness.meal.*`；頁面元件留待 T4，此時 Inertia 頁面不存在不影響路由註冊。
 
 ### T3 `water` 模組後端
@@ -81,7 +82,7 @@ M3 新增 migration，合併到 `main` 後照常以 Actions 部署（deploy 會�
 | Task | 狀態 |
 |---|---|
 | T1 設計 demo | 完成（2026-11-20） |
-| T2 meal 模組後端 | 未開始 |
+| T2 meal 模組後端 | 完成（2026-11-20） |
 | T3 water 模組後端 | 未開始 |
 | T4 前端實作 | 未開始 |
 | T5 測試 | 未開始 |

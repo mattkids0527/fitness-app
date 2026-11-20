@@ -12,7 +12,7 @@ const { openQuickAdd } = useQuickActions();
 
 const mainNavItems: NavItem[] = [
     { title: '今日', href: route('fitness.daily_summary.show', undefined, false), icon: House },
-    { title: '飲食', href: route('coming_soon.meals', undefined, false), icon: Utensils, badge: '即將推出' },
+    { title: '飲食', href: route('fitness.meal.index', undefined, false), icon: Utensils },
     { title: '健身', href: route('coming_soon.workouts', undefined, false), icon: Dumbbell, badge: '即將推出' },
     { title: '我的', href: route('fitness.profile.show', undefined, false), icon: User },
 ];

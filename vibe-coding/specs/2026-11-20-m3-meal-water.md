@@ -28,7 +28,7 @@
 
 | 模組 | 職責 | 依賴 |
 |---|---|---|
-| `meal` | 餐點、食物項目、常用食物、最近吃過、複製整餐；飲食頁、新增／編輯餐點頁、常用食物管理頁 | daily-summary（只監聽事件） |
+| `meal` | 餐點、食物項目、常用食物、最近吃過、複製整餐；飲食頁、新增／編輯餐點頁、常用食物管理頁 | profile（`UserCalendar` 切日、`EnergyTargetCalculator` 取飲食頁的熱量目標，T2 實作時補上）、daily-summary（只監聽事件） |
 | `water` | 喝水紀錄、每日建議量；今日頁喝水區塊、喝水面板 | profile（`WeightLogRepository` 取目前體重）、daily-summary（只監聽事件） |
 
 - 「一天」以使用者時區（`users.timezone`）切日，查詢時把當地日期換成 UTC 起訖時間。
@@ -171,7 +171,7 @@ M4 的信心度（`confidence`）到 M4 再加。
 meal: {
     totals: { kcal: number; protein_g: number; carbs_g: number; fat_g: number; fiber_g: number };
     has_missing_nutrients: boolean;
-    meals: { id: number; meal_type: MealType; eaten_at: string; kcal: number; item_names: string[] }[];
+    meals: { id: number; date: string; time: string; meal_type: MealType; note: string | null; kcal: number; item_names: string[] }[]; // date、time 為使用者時區
 }
 // water 模組加入
 water: {

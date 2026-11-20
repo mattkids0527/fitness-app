@@ -1,0 +1,20 @@
+{
+    "name": "fitness/meal",
+    "description": "飲食紀錄：餐點、食物項目、常用食物、最近吃過與複製整餐",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.2",
+        "laravel/framework": "^12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Fitness\\Meal\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Fitness\\Meal\\Tests\\": "tests/"
+        }
+    }
+}

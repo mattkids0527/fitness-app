@@ -17,7 +17,7 @@ const { openQuickAdd } = useQuickActions();
 
 const leftTabs: Tab[] = [
     { title: '今日', href: route('fitness.daily_summary.show', undefined, false), icon: House },
-    { title: '飲食', href: route('coming_soon.meals', undefined, false), icon: Utensils },
+    { title: '飲食', href: route('fitness.meal.index', undefined, false), icon: Utensils },
 ];
 
 const rightTabs: Tab[] = [
