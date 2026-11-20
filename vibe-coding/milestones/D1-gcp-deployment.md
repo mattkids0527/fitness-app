@@ -26,11 +26,11 @@
 
 ## Tasks
 
-### T1 修正 CI
+### T1 修正 CI（完成）
 `lint.yml` 改成只檢查不修改：`pint --test`、`npm run format:check`、`eslint .`（不加 `--fix`）；`permissions` 改成 `contents: read`；改用 `npm ci` 並開啟 npm 快取。`tests.yml` 的 `coverage: xdebug` 改成 `none`。兩支 workflow 都加 `concurrency`，同分支有新的 push 時取消舊的執行。本地先跑一次三項檢查，確認目前的程式碼本身會通過。
 **完成條件**：本地三項檢查都通過；兩支 workflow 的 YAML 語法正確。
 
-### T2 VM 初始化腳本
+### T2 VM 初始化腳本（完成）
 新增 `deploy/provision.sh`：在全新的 Ubuntu 上以 sudo 執行一次，可以重複執行（已完成的步驟會略過）。內容依規格 §5、§6：
 - 2GB swap
 - 套件：nginx、PHP 8.4-FPM 與所需擴充（ondrej/php PPA）、PostgreSQL 16（PGDG）、Composer、git、unzip
@@ -44,11 +44,11 @@
 可調整的值（資料庫密碼、`deploy` 的公鑰等）以參數或互動輸入提供，不寫死在 repo。新增 `deploy/README.md`，寫 GCP 主控台的操作：建立 e2-micro（`us-west1`）、外部 IP、防火牆規則、第一次 SSH 連線、執行腳本。
 **完成條件**：shellcheck 沒有錯誤；在本地的 Ubuntu 容器試跑過，systemd 相關步驟除外；使用者在 VM 上執行成功（與 T4 一起驗證）。
 
-### T3 資料庫備份
+### T3 資料庫備份（完成）
 新增備份腳本，由 `provision.sh` 安裝到 VM 並設定 cron：每天 03:00（Asia/Taipei）執行 `pg_dump -Fc`，存到 `/var/backups/fitness-app/`，保留最近 7 份。`deploy/README.md` 補上還原步驟（`pg_restore`）與手動備份指令。依規格 §9.3，把「migration 要相容新舊版程式」的原則補進 `vibe-coding/coding-style.md`。
 **完成條件**：在 VM 上手動執行備份腳本成功，產生備份檔；照 README 把備份還原到一個暫時的資料庫成功。
 
-### T4 網域與 Cloudflare Tunnel
+### T4 網域與 Cloudflare Tunnel（完成）
 調整 `provision.sh`，依規格 §3：
 - nginx 只聽 `127.0.0.1:80`，`server_name` 設為 `wn52777.com`，`www` 轉向不含 www 的網址
 - 傳給 PHP-FPM 時固定加上 `HTTPS=on`；`real_ip` 只信任來自 `127.0.0.1` 的 `CF-Connecting-IP`；看到 `X-Forwarded-Proto: http` 時轉向 https
