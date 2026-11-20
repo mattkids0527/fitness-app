@@ -1,0 +1,22 @@
+{
+    "name": "fitness/social-login-google",
+    "description": "social-login 的 Google driver（Laravel Socialite）",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.2",
+        "fitness/social-login": "*",
+        "laravel/framework": "^12.0",
+        "laravel/socialite": "^5.33"
+    },
+    "autoload": {
+        "psr-4": {
+            "Fitness\\SocialLoginGoogle\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Fitness\\SocialLoginGoogle\\Tests\\": "tests/"
+        }
+    }
+}

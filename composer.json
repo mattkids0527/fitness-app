@@ -12,6 +12,7 @@
         "php": "^8.2",
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/framework": "^12.0",
+        "laravel/socialite": "^5.33",
         "laravel/tinker": "^2.10.1",
         "tightenco/ziggy": "^2.4"
     },
@@ -30,14 +31,21 @@
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/",
             "Fitness\\DailySummary\\": "packages/fitness/daily-summary/src/",
-            "Fitness\\Profile\\": "packages/fitness/profile/src/"
-        }
+            "Fitness\\Profile\\": "packages/fitness/profile/src/",
+            "Fitness\\SocialLogin\\": "packages/fitness/social-login/src/",
+            "Fitness\\SocialLoginGoogle\\": "packages/fitness/social-login-google/src/"
+        },
+        "files": [
+            "packages/fitness/social-login/src/helpers.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
             "Tests\\": "tests/",
             "Fitness\\DailySummary\\Tests\\": "packages/fitness/daily-summary/tests/",
-            "Fitness\\Profile\\Tests\\": "packages/fitness/profile/tests/"
+            "Fitness\\Profile\\Tests\\": "packages/fitness/profile/tests/",
+            "Fitness\\SocialLogin\\Tests\\": "packages/fitness/social-login/tests/",
+            "Fitness\\SocialLoginGoogle\\Tests\\": "packages/fitness/social-login-google/tests/"
         }
     },
     "scripts": {

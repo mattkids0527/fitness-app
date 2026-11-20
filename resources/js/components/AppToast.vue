@@ -1,8 +1,23 @@
 <script setup lang="ts">
 import { useToast } from '@/composables/useToast';
+import type { SharedData } from '@/types';
+import { usePage } from '@inertiajs/vue3';
 import { Check } from 'lucide-vue-next';
+import { watch } from 'vue';
 
-const { message } = useToast();
+const { message, show } = useToast();
+const page = usePage<SharedData>();
+
+// 後端 redirect 時以 with('success', ...) 帶回的成功訊息；每次回應都是新的 flash 物件，同樣的文字連續出現也會再顯示
+watch(
+    () => page.props.flash,
+    (flash) => {
+        if (flash?.success) {
+            show(flash.success);
+        }
+    },
+    { immediate: true },
+);
 </script>
 
 <template>

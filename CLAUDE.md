@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 專案概述
 
-以 Laravel 12 官方 Vue Starter Kit 為基礎建立的手機優先飲食／健身紀錄應用（M1 帳號基礎已完成：首次設定、BMR／每日目標、體重紀錄、今日頁、底部 Tab 版型、PWA）。技術堆疊：Laravel 12 + Inertia.js 2 + Vue 3（TypeScript）+ Tailwind CSS 3 + shadcn-vue（radix-vue）+ Ziggy。資料庫為 PostgreSQL 16（以 `docker-compose.yml` 在本地起容器，對外 port 54329；開發庫 `fitness_app`、測試庫 `fitness_app_testing`）。語系 `zh_TW`（框架內建訊息在 `lang/zh_TW/`），時區 `Asia/Taipei`。
+以 Laravel 12 官方 Vue Starter Kit 為基礎建立的手機優先飲食／健身紀錄應用（M1 帳號基礎已完成：首次設定、BMR／每日目標、體重紀錄、今日頁、底部 Tab 版型、PWA；M2 Google 登入已完成：設定頁綁定／解除 Google、以已綁定的 Google 帳號登入）。技術堆疊：Laravel 12 + Inertia.js 2 + Vue 3（TypeScript）+ Tailwind CSS 3 + shadcn-vue（radix-vue）+ Ziggy。資料庫為 PostgreSQL 16（以 `docker-compose.yml` 在本地起容器，對外 port 54329；開發庫 `fitness_app`、測試庫 `fitness_app_testing`）。語系 `zh_TW`（框架內建訊息在 `lang/zh_TW/`），時區 `Asia/Taipei`。
 
 ## 常用指令
 
@@ -30,6 +30,7 @@ vendor/bin/pint
 # 帳號（第一版不開放註冊，帳號以指令建立；目前沒有寄信設定，忘記密碼改用指令重設）
 php artisan user:create --name="王小明" --email=ming@example.com --generate-password   # 缺的欄位會互動詢問
 php artisan user:password ming@example.com --generate-password
+php artisan db:seed          # 本地開發帳號（只在 APP_ENV=local；帳密讀 .env 的 DEV_ACCOUNT_*，已完成首次設定，可重複執行）
 
 # 測試（PHPUnit；使用 PostgreSQL 的 fitness_app_testing，需先 docker compose up -d）
 ./vendor/bin/phpunit
@@ -50,16 +51,18 @@ CI（`.github/workflows/`）在 push/PR 到 `main`、`develop` 時執行：Pint 
 - 沒有獨立 API；controller / route closure 透過 `Inertia::render('路徑/Page', $props)` 回傳頁面，元件名稱對應 `resources/js/pages/{name}.vue`（解析邏輯在 `resources/js/app.ts`）。
 - 路由分檔：`routes/web.php`（入口：`/` 未登入導向登入、已登入導向今日頁 `/today`；暫放 `/meals`、`/workouts` 的「即將推出」頁，飲食／健身模組完成後移除）、`routes/auth.php`（登入/註冊/密碼重設/信箱驗證）、`routes/settings.php`（帳號資料、密碼、外觀設定）。業務路由在各模組的 `src/routes/web.php`。
 - 註冊預設關閉：`config('auth.registration_enabled')`（`AUTH_REGISTRATION_ENABLED`）為 false 時不註冊 `register` 路由；`config('auth.password_reset_enabled')`（`AUTH_PASSWORD_RESET_ENABLED`）控制登入頁是否顯示「忘記密碼」。登入後首頁是 `fitness.daily_summary.show`（starter kit 原本的 `dashboard` 已移除）。
-- 全域共享 props 定義在 `app/Http/Middleware/HandleInertiaRequests.php::share()`（`name`、`quote`、`auth.user`），對應的 TS 型別在 `resources/js/types/index.ts`（`SharedData`、`User`、`BreadcrumbItem`、`NavItem`）。修改共享資料時兩邊要同步。
+- 全域共享 props 定義在 `app/Http/Middleware/HandleInertiaRequests.php::share()`（`name`、`quote`、`auth.user`、`flash`），對應的 TS 型別在 `resources/js/types/index.ts`（`SharedData`、`Flash`、`User`、`BreadcrumbItem`、`NavItem`）。修改共享資料時兩邊要同步。模組自己的共享資料由模組 Provider 以 `Inertia::share()` 加入（例如 `social_login.providers`，型別在 `types/<module>.ts`），`app/` 不依賴模組。
+- 一次性結果訊息：redirect 時 `->with('success', '文字')` 由 `AppToast` 顯示；`->with('error', ['title' => ..., 'message' => ...])` 由 `components/FlashAlert.vue` 在頁面內顯示（放在需要的頁面，例如登入頁、已連結帳號頁）。
 - 表單驗證使用 `app/Http/Requests/` 下的 FormRequest（模組的放在模組內 `Http/Requests/`）。
+- 第三方登入：核心 `social-login`（`social_accounts` 表、driver 合約與 `SocialProviderManager`、`social_login()` helper、綁定／登入／解除流程）＋ driver `social-login-google`（Socialite，綁定 `fitness.social_login.google`）。只有已登入者能在 `/settings/connected-accounts` 綁定，未綁定的第三方帳號不能登入、不自動建帳號。啟用清單 `SOCIAL_LOGIN_PROVIDERS`，Google 憑證 `GOOGLE_CLIENT_ID`／`GOOGLE_CLIENT_SECRET`／`GOOGLE_REDIRECT_URI`（沒填時按鈕自動隱藏，建立步驟見 `packages/fitness/social-login-google/README.md`）。登入與綁定共用 callback，以 session 記錄意圖。新增平台只需新增 `social-login-<平台>` driver 模組。測試以 `Fitness\SocialLogin\Tests\Fakes\FakeSocialProvider` 取代 driver，不連外。
 - `profile` 模組透過 HTTP Kernel 的 `appendMiddlewareToGroup()` 把 `EnsureProfileCompleted` 加到 `web` middleware 群組（不要改用 Router 的 `pushMiddlewareToGroup()`，Kernel 重新同步群組時會被蓋掉）：已登入但未完成首次設定（`users.onboarded_at` 為空）的使用者，所有頁面都會被導向 `/onboarding`。新增「未完成設定也要能進入」的路由時，把路由名稱加到 `config('fitness.profile.onboarding_except_routes')`。測試用的 `UserFactory` 預設為已完成設定，要測未完成狀態用 `->notOnboarded()`。
 
 ### 前端結構（`resources/js`，alias `@` → `resources/js`）
-- `pages/`：Inertia 頁面（`auth/`、`settings/`、`profile/`、`daily-summary/`、`ComingSoon.vue`）。
-- 業務模組：`profile`（首次設定、BMR／每日目標、體重紀錄）、`daily-summary`（今日頁；發出收集型事件 `DailySummaryCollecting`，各模組以 listener `addSection()` 加入當日摘要，前端依 `sections.<key>` 顯示）。
-- `layouts/`：頁面以 `AppLayout`（內部委派給 `layouts/app/AppSidebarLayout` 或 `AppHeaderLayout`）或 `AuthLayout`（委派給 `layouts/auth/*`）包裝；設定頁再套 `layouts/settings/Layout.vue`。切換整站版型時改這兩個入口檔即可。
+- `pages/`：Inertia 頁面（`auth/`、`settings/`、`profile/`、`daily-summary/`、`social-login/`、`ComingSoon.vue`）。
+- 業務模組：`profile`（首次設定、BMR／每日目標、體重紀錄）、`daily-summary`（今日頁；發出收集型事件 `DailySummaryCollecting`，各模組以 listener `addSection()` 加入當日摘要，前端依 `sections.<key>` 顯示）、`social-login`（已連結帳號頁、登入頁的第三方按鈕 `components/social-login/SocialLoginButtons.vue`）。
+- `layouts/`：頁面以 `AppLayout`（內部委派給 `layouts/app/AppSidebarLayout` 或 `AppHeaderLayout`）或 `AuthLayout`（委派給 `layouts/auth/*`）包裝；設定頁再套 `layouts/settings/Layout.vue`（分頁：個人帳號、密碼、外觀、已連結帳號；新增設定分頁改這裡的 `sidebarNavItems`）。切換整站版型時改這兩個入口檔即可。
 - `components/`：應用元件。版型：手機（< 768px）用 `AppBottomNav.vue` 底部 Tab，桌機用 `AppSidebar.vue` 側欄；`QuickAddDialog.vue`（＋選單）、`profile/WeightLogSheet.vue`、`AppToast.vue` 掛在 `layouts/app/AppSidebarLayout.vue`，開關狀態在 `composables/useQuickActions.ts`、`useToast.ts`。`ResponsiveDialog.vue` 手機為底部面板、桌機為置中對話框；`AppPage.vue` 是頁面標題＋內容容器。模組元件放 `components/<module>/`，型別放 `types/<module>.ts`。
-- 品牌色：橘色，`resources/css/app.css` 的 `--primary`（shadcn 預設按鈕即為橘色）、`--brand-soft`（選取狀態淺底，Tailwind `bg-brand-soft`）、`--page`（頁面底色，`bg-page`）。設計定稿在 `vibe-coding/ui/features/m1-account/`。
+- 品牌色：橘色，`resources/css/app.css` 的 `--primary`（shadcn 預設按鈕即為橘色）、`--brand-soft`（選取狀態淺底，Tailwind `bg-brand-soft`）、`--page`（頁面底色，`bg-page`）。設計定稿在 `vibe-coding/ui/features/m1-account/`、`m2-google-login/`。
 - BMR／每日目標的前端即時預覽在 `composables/useEnergyTargets.ts`，係數由後端 props（`options.calculation`）帶入，公式要與後端 `EnergyTargetCalculator` 保持一致。
 - PWA：`public/manifest.webmanifest`、`public/sw.js`（頁面不快取、`/build/` 快取、離線顯示 `public/offline.html`）、`public/icons/`；service worker 只在正式建置註冊（`app.ts`）。改快取策略時調整 `sw.js` 的 `CACHE_VERSION`。
 - `components/ui/`：shadcn-vue 產生的元件，每個元件資料夾有 `index.ts` 匯出；`lib/utils.ts` 提供 `cn()`（clsx + tailwind-merge）。

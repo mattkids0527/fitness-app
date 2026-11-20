@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import FlashAlert from '@/components/FlashAlert.vue';
 import InputError from '@/components/InputError.vue';
+import SocialLoginButtons from '@/components/social-login/SocialLoginButtons.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -35,6 +37,8 @@ const submit = () => {
         <div v-if="status" class="mb-4 text-center text-sm font-medium text-green-600">
             {{ status }}
         </div>
+
+        <FlashAlert class="-mt-2" />
 
         <form @submit.prevent="submit" class="flex flex-col gap-6">
             <div class="grid gap-6">
@@ -82,6 +86,8 @@ const submit = () => {
                     登入
                 </Button>
             </div>
+
+            <SocialLoginButtons />
 
             <div v-if="canRegister" class="text-center text-sm text-muted-foreground">
                 還沒有帳號？

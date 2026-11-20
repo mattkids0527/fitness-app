@@ -17,10 +17,21 @@ export interface NavItem {
     badge?: string;
 }
 
+export interface FlashError {
+    title: string;
+    message: string;
+}
+
+export interface Flash {
+    success: string | null;
+    error: FlashError | null;
+}
+
 export interface SharedData {
     name: string;
     quote: { message: string; author: string };
     auth: Auth;
+    flash: Flash;
     ziggy: {
         location: string;
         url: string;

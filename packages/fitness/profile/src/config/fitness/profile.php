@@ -76,7 +76,7 @@ return [
     'weight_logs_per_page' => 20,
 
     /*
-    | 未完成首次設定時仍可進入的路由名稱（支援 * 萬用字元）：首次設定本身、登出、信箱驗證、密碼確認與設定頁。
+    | 未完成首次設定時仍可進入的路由名稱（支援 * 萬用字元）：首次設定本身、登出、信箱驗證、密碼確認、設定頁與第三方登入的 callback。
     */
     'onboarding_except_routes' => [
         'fitness.profile.onboarding.*',
@@ -87,6 +87,7 @@ return [
         'password.edit',
         'password.update',
         'appearance',
+        'fitness.social_login.callback',
     ],
 
 ];
