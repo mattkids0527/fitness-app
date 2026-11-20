@@ -3,8 +3,8 @@
 # Fitness App 正式環境 VM 初始化腳本
 #
 # 在全新的 Ubuntu 22.04 / 24.04（GCP e2-micro）上以 root 執行一次，安裝並設定：
-# swap、時區、nginx、PHP-FPM、PostgreSQL、Composer、deploy 帳號、SSH 強化、ufw、fail2ban、自動安全性更新，
-# 並建立部署目錄與正式環境 .env 範本。可重複執行：已完成的步驟會略過，設定檔會以最新內容覆寫。
+# swap、時區、nginx、PHP-FPM、PostgreSQL、Composer、deploy 帳號、SSH 強化、ufw、fail2ban、自動安全性更新、
+# 資料庫每日備份，並建立部署目錄與正式環境 .env 範本。可重複執行：已完成的步驟會略過，設定檔會以最新內容覆寫。
 #
 # 用法（在 VM 上）：
 #   sudo DEPLOY_PUBKEY="ssh-ed25519 AAAA... fitness-deploy" bash provision.sh
@@ -28,6 +28,9 @@ DB_USER="fitness_app"
 SWAP_SIZE="2G"
 TIMEZONE="Asia/Taipei"
 FPM_SOCKET="/run/php/${APP_NAME}.sock"
+BACKUP_DIR="/var/backups/${APP_NAME}"
+BACKUP_KEEP="7"
+BACKUP_SCRIPT="/usr/local/bin/${APP_NAME}-backup"
 
 DEPLOY_PUBKEY="${DEPLOY_PUBKEY:-}"
 APP_URL="${APP_URL:-}"
@@ -132,6 +135,8 @@ setup_timezone() {
     step "設定時區 ${TIMEZONE}"
     if has_systemd; then
         timedatectl set-timezone "$TIMEZONE"
+        # cron 只在啟動時讀取時區，改完要重啟才會用新的時區排程
+        systemctl restart cron 2>/dev/null || true
     else
         ln -sf "/usr/share/zoneinfo/${TIMEZONE}" /etc/localtime
         echo "$TIMEZONE" >/etc/timezone
@@ -381,6 +386,53 @@ SQL
     fi
 }
 
+# 安裝資料庫每日備份：備份腳本、備份目錄與 cron（每天 03:00 以 postgres 身分執行，保留最近 7 份）
+setup_backup() {
+    step "設定資料庫每日備份"
+    # 目錄群組設為 deploy 並加上 setgid：postgres 寫入的備份檔群組自動為 deploy，deploy 可以用 scp 下載
+    install -d -m 2750 -o postgres -g "$DEPLOY_USER" "$BACKUP_DIR"
+
+    cat >"$BACKUP_SCRIPT" <<SCRIPT
+#!/usr/bin/env bash
+#
+# Fitness App 資料庫備份（由 provision.sh 產生，修改請改 provision.sh 後重跑）
+# 以 pg_dump 自訂格式備份到 ${BACKUP_DIR}，只保留最近 ${BACKUP_KEEP} 份。
+# 手動執行：sudo -u postgres ${BACKUP_SCRIPT}
+#
+set -euo pipefail
+umask 027
+
+if [ "\$(id -un)" != "postgres" ]; then
+    echo "請以 postgres 身分執行：sudo -u postgres \$0" >&2
+    exit 1
+fi
+
+cd "${BACKUP_DIR}"
+file="${DB_NAME}-\$(date +%Y%m%d-%H%M%S).dump"
+
+# 先寫到暫存檔，成功後才改名，避免中斷時留下不完整的檔案被當成有效備份
+pg_dump --format=custom --dbname="${DB_NAME}" --file="\$file.partial"
+mv "\$file.partial" "\$file"
+
+# 只保留最近 ${BACKUP_KEEP} 份，並清掉之前失敗留下的暫存檔
+ls -1t ${DB_NAME}-*.dump | tail -n +$((BACKUP_KEEP + 1)) | xargs -r rm -f --
+rm -f ./*.partial
+
+echo "備份完成：${BACKUP_DIR}/\$file（\$(du -h "\$file" | cut -f1)）"
+SCRIPT
+    chmod 755 "$BACKUP_SCRIPT"
+
+    cat >/etc/cron.d/${APP_NAME}-backup <<CRON
+# Fitness App：每天 03:00（系統時區 ${TIMEZONE}）備份資料庫，結果寫入 syslog（journalctl -t ${APP_NAME}-backup）
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+0 3 * * * postgres ${BACKUP_SCRIPT} 2>&1 | logger -t ${APP_NAME}-backup
+CRON
+    chmod 644 /etc/cron.d/${APP_NAME}-backup
+    svc enable --now cron
+    info "備份目錄 ${BACKUP_DIR}，手動備份：sudo -u postgres ${BACKUP_SCRIPT}"
+}
+
 # 設定 nginx：root 指向 current/public，/build/ 長效快取，開 gzip
 configure_nginx() {
     step "設定 nginx"
@@ -582,6 +634,7 @@ main() {
     setup_unattended_upgrades
     configure_php
     configure_postgres
+    setup_backup
     configure_nginx
     setup_app_directory
     print_summary

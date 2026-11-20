@@ -303,6 +303,12 @@ $sections = $event->getSections();
 
 - 資料表的 migration 放在擁有該資料表的模組 `src/Database/migrations/`；之後要修改該表，也放在同一個模組。
 - 只有跨模組物件（例如跨表 view）或找不到所屬模組時，才放根目錄 `database/migrations/`。
+- **相容新舊版程式**：部署時會先執行 migration，之後 `current` 連結才切換到新版；`dep rollback` 也只會切回舊版程式，不會退回資料庫。所以 migration 執行後，新舊兩個版本的程式都要能正常運作：
+  - 新增欄位：先設成 nullable 或給預設值，不要直接加上沒有預設值的 NOT NULL 欄位。
+  - 刪除欄位或資料表：分兩次部署。第一次先讓程式不再使用，第二次才用 migration 刪掉。
+  - 欄位改名：先新增新欄位並搬移資料，等程式都改用新欄位後，再刪掉舊欄位。
+  - 需要搬移大量資料時，不要在 migration 裡長時間鎖表，改成另外寫 artisan 指令執行。
+  - `down()` 仍然要寫，給本地開發與測試使用；正式環境不依賴它。
 
 ## 13. 測試
 

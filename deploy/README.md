@@ -4,7 +4,7 @@
 
 | 檔案 | 用途 |
 |---|---|
-| `provision.sh` | VM 初始化腳本：在全新的 Ubuntu 上執行一次，安裝並設定整個執行環境 |
+| `provision.sh` | VM 初始化腳本：在全新的 Ubuntu 上執行一次，安裝並設定整個執行環境，包含資料庫每日備份 |
 
 目前是**階段 A**：用 `http://<靜態 IP>` 上線。Google 登入與 PWA 安裝要等有網域、改成 HTTPS 後才能使用。
 
@@ -76,6 +76,7 @@ sudo DEPLOY_PUBKEY="ssh-ed25519 AAAA...（貼上公鑰）... fitness-deploy" bas
 | 安全性 | SSH 關閉密碼登入與 root 登入、ufw 只開 22／80／443、fail2ban（SSH 失敗 5 次封鎖 1 小時） |
 | PHP-FPM | 以 `deploy` 身分執行，`pm = ondemand`，最多 4 個 worker |
 | PostgreSQL | 只聽 localhost，`shared_buffers = 128MB`、`max_connections = 20`；建立資料庫 `fitness_app` 和同名的帳號，密碼隨機產生 |
+| 備份 | 每天 03:00 備份資料庫到 `/var/backups/fitness-app/`，保留最近 7 份（見 [§6](#6-資料庫備份與還原)） |
 | nginx | root 指向 `/var/www/fitness-app/current/public`；`/build/` 長效快取；`sw.js`、manifest 不快取；開啟 gzip；擋掉隱藏檔與 `index.php` 以外的 `.php` |
 | 部署目錄 | `/var/www/fitness-app/shared/.env`：正式環境設定，`APP_KEY` 與資料庫密碼自動產生，`APP_URL` 自動帶入 VM 的外部 IP |
 
@@ -116,6 +117,91 @@ nano /var/www/fitness-app/shared/.env
 **4. 確認 nginx 正常**
 
 用瀏覽器開 `http://<VM 外部 IP>`，看到 **404 Not Found** 是正常的，因為程式還沒部署，nginx 已經在回應。
+
+## 6. 資料庫備份與還原
+
+`provision.sh` 會安裝備份腳本 `/usr/local/bin/fitness-app-backup`，每天 03:00（台灣時間）由 cron 以 `postgres` 身分執行。
+
+- 備份格式是 `pg_dump` 的自訂格式（`.dump`），檔名例如 `fitness_app-20261121-030000.dump`。
+- 只保留最近 7 份，舊的自動刪除。
+- 備份目錄的群組是 `deploy`，可以用部署金鑰把備份下載回自己的電腦。
+
+### 查看備份
+
+```bash
+ls -lh /var/backups/fitness-app/
+```
+
+查看每天備份的執行結果：
+
+```bash
+journalctl -t fitness-app-backup --since "7 days ago"
+```
+
+### 手動備份
+
+在風險較高的部署之前，例如有刪欄位的 migration，建議先手動備份一次：
+
+```bash
+sudo -u postgres fitness-app-backup
+```
+
+### 下載備份到自己的電腦
+
+目前沒有異地備份，重要的時候可以手動下載一份。在你的電腦上執行：
+
+```bash
+scp -i ~/.ssh/fitness_deploy "deploy@<VM 外部 IP>:/var/backups/fitness-app/*.dump" ./
+```
+
+### 先還原到暫時的資料庫驗證
+
+確認備份檔可以正常還原，不會影響正式資料：
+
+```bash
+sudo -u postgres createdb --owner=fitness_app fitness_app_restore_test
+sudo -u postgres pg_restore --no-owner --role=fitness_app --dbname=fitness_app_restore_test /var/backups/fitness-app/<檔名>.dump
+sudo -u postgres psql -d fitness_app_restore_test -c '\dt'
+sudo -u postgres dropdb fitness_app_restore_test
+```
+
+### 還原正式資料庫
+
+這會用備份**覆蓋**目前的資料，備份時間點之後新增的資料都會消失。
+
+1. 先把目前的狀態備份一份，萬一還原錯了還可以回來：
+
+   ```bash
+   sudo -u postgres fitness-app-backup
+   ```
+
+2. 讓網站進入維護模式，避免還原過程中有人寫入資料：
+
+   ```bash
+   sudo -u deploy php /var/www/fitness-app/current/artisan down
+   ```
+
+3. 還原。`--clean --if-exists` 會先刪掉現有的資料表再重建；`--single-transaction` 讓中途失敗時整個取消，不會只還原一半：
+
+   ```bash
+   sudo -u postgres pg_restore --clean --if-exists --single-transaction --no-owner --role=fitness_app --dbname=fitness_app /var/backups/fitness-app/<檔名>.dump
+   ```
+
+4. 清除快取並結束維護模式：
+
+   ```bash
+   sudo -u deploy php /var/www/fitness-app/current/artisan optimize:clear
+   ```
+
+   ```bash
+   sudo -u deploy php /var/www/fitness-app/current/artisan optimize
+   ```
+
+   ```bash
+   sudo -u deploy php /var/www/fitness-app/current/artisan up
+   ```
+
+> 備份檔裡的資料表結構是當時的版本。`--clean` 只會刪除備份檔裡有的資料表，備份之後才新增的資料表會原樣留著。如果備份之後部署過新的 migration，還原後要再執行一次 `php artisan migrate --force`，或是用 `dep rollback` 切回和備份同一個時期的程式。
 
 ## 疑難排解
 
