@@ -49,18 +49,18 @@ class VersionTest extends TestCase
     {
         $this->writeVersionFile([
             'version' => 'v1.3.0',
-            'commit' => 'D974E73A1B2C3D4E5F60718293A4B5C6D7E8F901',
-            'deployed_at' => '2026-11-21T06:30:00Z',
+            'commit' => 'd974e73a1b2c3d4e5f60718293a4b5c6d7e8f901',
+            'deployed_at' => '2026-11-20T17:30:00Z',
         ]);
 
         $this->actingAs(User::factory()->create())
             ->get(route('version'))
             ->assertInertia(fn (Assert $page) => $page
                 ->component('settings/Version')
+                // UTC 11/20 17:30 是台北 11/21 01:30，日期以台北時間為準；commit 不提供給畫面
                 ->where('version', [
                     'version' => 'v1.3.0',
-                    'commit' => 'd974e73',
-                    'deployed_at' => '2026-11-21 14:30',
+                    'updated_at' => '2026-11-21',
                 ])
             );
     }
@@ -88,11 +88,10 @@ class VersionTest extends TestCase
         }
     }
 
-    public function test_invalid_commit_and_time_are_omitted(): void
+    public function test_invalid_time_is_omitted(): void
     {
         $this->writeVersionFile([
             'version' => 'v1.3.1',
-            'commit' => 'not-a-sha',
             'deployed_at' => 'yesterday-ish',
         ]);
 
@@ -100,8 +99,7 @@ class VersionTest extends TestCase
             ->get(route('version'))
             ->assertInertia(fn (Assert $page) => $page->where('version', [
                 'version' => 'v1.3.1',
-                'commit' => null,
-                'deployed_at' => null,
+                'updated_at' => null,
             ]));
     }
 
