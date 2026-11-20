@@ -5,14 +5,14 @@
 - 依據規格：[M4 規格](../specs/2026-11-21-m4-photo-analysis.md)
 - 設計定稿：[ui/features/m4-photo-analysis](../ui/features/m4-photo-analysis/README.md)
 - 分支：`develop`
-- 目前進度：T1 demo、T2 `food-analyzer` 核心模組完成。下一步是 T3（Gemini driver 與模型實測，需要使用者的 API 金鑰與測試照片）。
+- 目前進度：T1 demo、T2 `food-analyzer` 核心、T3 Gemini driver 與模型實測完成。下一步是 T4（meal 模組後端）。
 
 ## 下次接手從這裡開始
 
 1. `git checkout develop && git pull --ff-only`。
-2. 先讀規格 §2（已決 Q1～Q10）與 §3～§6，再讀 milestone 的 T3。寫程式前依 CLAUDE.md 讀 `vibe-coding/coding-style.md`；driver 寫法參考 `social-login-google`，核心合約見 `packages/fitness/food-analyzer/README.md`。
+2. 先讀規格 §2（已決 Q1～Q10）與 §3～§6，再讀 milestone 的 T4。寫程式前依 CLAUDE.md 讀 `vibe-coding/coding-style.md`；driver 寫法參考 `social-login-google`，核心合約見 `packages/fitness/food-analyzer/README.md`。
 3. 每個 Task 完成就 commit 並 push，再詢問是否進行下一個 Task。
-4. T3 需要使用者：到 Google AI Studio 申請 `GEMINI_API_KEY` 填進本地 `.env`，並準備 5～10 張真實餐點照片做模型實測。可以在 T2 進行時先請使用者準備。
+4. 本地 `.env` 已有 `GEMINI_API_KEY`（使用者提供）、`GEMINI_MODEL=gemini-3.1-flash-lite`、`GEMINI_THINKING_LEVEL=low`；真的打 API 會用掉 Gemini 免費額度與當天 20 次上限，T4 手動測試請用 `FOOD_ANALYZER_DRIVER=fake`（需在 `.env` 暫時改，並在 tinker／測試綁定 `FakeFoodAnalyzer`）或少量呼叫。
 5. `develop` 上還有一個沒部署的小改動：未綁定 Google 登入的錯誤說明加上「還沒有帳號的話，請聯絡管理員。」（見 [D2 handoff](2026-11-21-D2-release-versioning.md)）。如果使用者在 M4 完成前想先上線，以 `v1.3.4` 部署；否則跟著 M4 一起以 `v1.4.0` 上線。
 
 ## 重要決定（跟總覽規格不同的地方）
@@ -33,6 +33,13 @@
 - 每日上限：`config('fitness.food_analyzer.daily_limit')` ← env `FOOD_ANALYZER_DAILY_LIMIT`（預設 20），`.env.example` 已加 `FOOD_ANALYZER_*`。T7 記得把這些與 `GEMINI_*` 加進 `PRODUCTION_ENV`，並在 CLAUDE.md 補上 `llm-log` 模組。
 - driver 要做的事：實作 `prompt()`（回傳送出的完整文字 prompt，`analyze()` 要送同一段）與 `analyze()`，把 429／逾時／schema 不符轉成 `ProviderRateLimitedException`／`AnalysisTimeoutException`／`AnalysisFailedException`，看不出食物丟 `NoFoodDetectedException`（或回傳 0 個項目），已拿到回應時以 `withResponse()` 附上 token 用量。
 - 測試（T6）尚未寫；本地 tinker 驗證過。
+
+## T3 完成內容（2026-11-21）
+
+- `packages/fitness/food-analyzer-gemini/`：`Drivers\Gemini`（Prism structured、inline 圖片、JSON schema、提示詞、錯誤轉換），綁定 `fitness.food_analyzer.gemini`；README 有金鑰申請步驟。安裝 `prism-php/prism` `^0.103`。
+- 模型實測結果與選定模型 `gemini-3.1-flash-lite` 記在 milestone「模型實測」。用的是 Wikimedia 公開照片，使用者的真實照片還沒測，T7 驗收時順便看。
+- 本地開發庫留有 3 筆真實呼叫紀錄（`llm_logs` 3～5），可以看 `content` 的 prompt 長相。
+- Driver 的自動測試（Prism fake）在 T6 寫。
 
 ## 這次 session 的其他變更
 

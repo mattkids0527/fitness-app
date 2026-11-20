@@ -14,6 +14,7 @@
         "laravel/framework": "^12.0",
         "laravel/socialite": "^5.33",
         "laravel/tinker": "^2.10.1",
+        "prism-php/prism": "^0.103.0",
         "tightenco/ziggy": "^2.4"
     },
     "require-dev": {
@@ -33,6 +34,7 @@
             "Database\\Seeders\\": "database/seeders/",
             "Fitness\\DailySummary\\": "packages/fitness/daily-summary/src/",
             "Fitness\\FoodAnalyzer\\": "packages/fitness/food-analyzer/src/",
+            "Fitness\\FoodAnalyzerGemini\\": "packages/fitness/food-analyzer-gemini/src/",
             "Fitness\\LlmLog\\": "packages/fitness/llm-log/src/",
             "Fitness\\Meal\\": "packages/fitness/meal/src/",
             "Fitness\\Profile\\": "packages/fitness/profile/src/",
@@ -50,6 +52,7 @@
             "Tests\\": "tests/",
             "Fitness\\DailySummary\\Tests\\": "packages/fitness/daily-summary/tests/",
             "Fitness\\FoodAnalyzer\\Tests\\": "packages/fitness/food-analyzer/tests/",
+            "Fitness\\FoodAnalyzerGemini\\Tests\\": "packages/fitness/food-analyzer-gemini/tests/",
             "Fitness\\LlmLog\\Tests\\": "packages/fitness/llm-log/tests/",
             "Fitness\\Meal\\Tests\\": "packages/fitness/meal/tests/",
             "Fitness\\Profile\\Tests\\": "packages/fitness/profile/tests/",

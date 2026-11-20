@@ -44,7 +44,7 @@
 |---|---|---|
 | 今天已達上限 | 今天的 20 次已用完，明天再試或改手動輸入 | 不算（沒有呼叫） |
 | 看不出是食物 | 照片裡看不出食物，換一張或改手動輸入 | 算 |
-| Gemini 次數限制（免費層 429） | Gemini 暫時忙碌，稍等一下再試 | 算 |
+| Gemini 次數限制（免費層 429）或過載（503） | Gemini 暫時忙碌，稍等一下再試 | 算 |
 | 逾時 | 分析太久沒有回應，再試一次 | 算 |
 | 其他錯誤 | 分析沒有完成，再試一次 | 算 |
 
@@ -111,7 +111,7 @@ migration 都是新增可 null 欄位或新表，相容舊版程式（`coding-st
 ## 6. 部署與環境
 
 - 套件：`prism-php/prism`；npm `browser-image-compression`、`exifr`（讀拍攝時間）。
-- `.env`：`GEMINI_API_KEY`、`GEMINI_MODEL`、`FOOD_ANALYZER_DRIVER=gemini`、`FOOD_ANALYZER_DAILY_LIMIT=20`、`FOOD_ANALYZER_TIMEOUT=25`（秒）。正式環境更新 GitHub Secret `PRODUCTION_ENV` 後部署。
+- `.env`：`GEMINI_API_KEY`、`GEMINI_MODEL`（實測後選 `gemini-3.1-flash-lite`）、`GEMINI_THINKING_LEVEL`（`low`）、`FOOD_ANALYZER_DRIVER=gemini`、`FOOD_ANALYZER_DAILY_LIMIT=20`、`FOOD_ANALYZER_TIMEOUT=25`（秒）。正式環境更新 GitHub Secret `PRODUCTION_ENV` 後部署。
 - 上傳大小：壓縮後約 300～500KB，後端驗證上限 5MB；VM 現有 `client_max_body_size 12M`、`upload_max_filesize 10M` 已足夠。
 - 逾時：Gemini 呼叫 25 秒逾時，在 PHP 預設 `max_execution_time` 30 秒與 nginx 60 秒之內；實測若不夠再一起調整 `provision.sh`。
 - 不需要 queue worker、排程或新的 VM 系統設定。

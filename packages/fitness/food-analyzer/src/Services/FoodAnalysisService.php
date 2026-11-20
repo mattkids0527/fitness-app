@@ -134,7 +134,7 @@ class FoodAnalysisService
                 ...$this->llmLogAttributes($driver, $prompt, $durationMs),
                 'status' => LlmLog::STATUS_FAILED,
                 'error' => $e->errorCode(),
-                'response' => $e->rawResponse,
+                'response' => $e->rawResponse ?? ['error_message' => Str::limit($e->getPrevious()?->getMessage() ?? $e->getMessage(), 1000)],
                 'input_tokens' => $e->inputTokens,
                 'output_tokens' => $e->outputTokens,
             ]);

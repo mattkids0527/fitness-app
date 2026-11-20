@@ -1,6 +1,6 @@
 # M4 Gemini 照片分析
 
-- 狀態：進行中（2026-11-21 T2 完成；下一步 T3。交接見 [handoff](../handoffs/2026-11-21-M4-photo-analysis.md)）
+- 狀態：進行中（2026-11-21 T3 完成；下一步 T4。交接見 [handoff](../handoffs/2026-11-21-M4-photo-analysis.md)）
 - 建立日期：2026-11-21
 - 分支：`develop`（每個 Task 完成就 commit 並 push；PR `develop` → `main` 由使用者開與合併）
 - 依據規格：[M4 照片分析規格](../specs/2026-11-21-m4-photo-analysis.md)
@@ -37,9 +37,10 @@
 **完成條件**：`composer dump-autoload`、migrate 成功；pint 通過；用 tinker 以 Fake driver 跑一次分析，`food_analyses` 有紀錄。
 **實作補充**：`food_analyses` 多一欄 `result`（jsonb，正規化後的項目），T4 確認頁從這裡帶入；使用者要求另建 `llm-log` 模組與 `llm_logs` 表，記錄每次呼叫的 LLM 種類（例如 `gemini`）、模型、完整 prompt（`content`）、回應、token、耗時，`food_analyses` 以 `llm_log_id` 關聯，driver 合約加 `prompt()`；每日上限 env `FOOD_ANALYZER_DAILY_LIMIT`（預設 20）已寫入 `.env.example`；每日上限以 profile 的 `UserCalendar` 切日；另有 `DriverNotAvailableException`（driver 沒綁定或缺金鑰，不算次數）；例外的 `toFlash()` 回傳 `{code, title, message}`。tinker 驗證成功、429、非預期例外、超過上限四種情況。
 
-### T3 `food-analyzer-gemini` driver 與模型實測
+### T3 `food-analyzer-gemini` driver 與模型實測（完成）
 建立 `packages/fitness/food-analyzer-gemini/`，安裝 `prism-php/prism`，只綁定 `fitness.food_analyzer.gemini`。圖片以 inline data 送出（不用 Files API），JSON schema 結構化輸出，提示詞要求繁體中文、整份數值、看不出食物時回報；把 429、逾時、schema 不符等轉成 T2 的 Exception；記錄 model、token 用量、耗時。附 README 說明 API 金鑰申請步驟。接著用 5～10 張常見餐點照片比較候選模型（準確度、耗時、token），結果記在本檔，決定 `GEMINI_MODEL`。
 **完成條件**：本地以真實 API 分析成功；實測結果與選定模型寫入本檔。**需要使用者**：到 Google AI Studio 申請 API 金鑰填進本地 `.env`，並提供或同意使用測試照片。
+**實作補充**：Prism `^0.103`；Gemini 3 以後的思考程度以 `GEMINI_THINKING_LEVEL`（預設 `low`）設定，不設時 `gemini-3.8-flash` 超過 25 秒；503 過載也視為「Gemini 暫時忙碌」；失敗但沒有回應時，錯誤訊息存進 `llm_logs.response.error_message`。結果見下方「模型實測」。
 
 ### T4 `meal` 模組後端
 migration：`meals.food_analysis_id`（可 null，null on delete）、`meal_items.confidence`（可 null）。路由：`POST /meals/analyze`（照片＋補充說明，驗證 jpeg／png／webp、5MB 以內，只在記憶體讀取不呼叫 `store()`）；成功後導向 `GET /meals/create?analysis={id}`，由伺服器讀回該筆分析（只能讀自己的、尚未建立餐點的）帶入表單 defaults，重新整理也不會遺失結果；失敗以 `back()->with('error', ...)` 回傳失敗種類與今日剩餘次數。`store` 接受 `food_analysis_id` 與項目 `confidence`，設定 `source = ai`；同一筆分析只能建立一次餐點。飲食頁與今日頁的餐點資料帶 `source`。分析頁與確認頁的 props 帶今日剩餘次數。
@@ -57,13 +58,31 @@ migration：`meals.food_analysis_id`（可 null，null on delete）、`meal_item
 更新 `CLAUDE.md`（專案概述、模組、`.env` 項目）與 `deploy/README.md`（Gemini 設定）。使用者在 GitHub Secret `PRODUCTION_ENV` 加入 `GEMINI_API_KEY`、`GEMINI_MODEL` 等，合併 PR 後以 `v1.4.0` 部署。正式站驗收：iPhone 拍照與上傳（含拍攝時間帶入）、Android、桌機上傳、失敗重試、次數顯示。寫 handoff，milestone 標為完成。
 **完成條件**：正式站驗收通過。
 
+## 模型實測（T3，2026-11-21）
+
+- 照片：Wikimedia Commons 的公開照片 7 張（雞腿便當、牛肉麵、滷肉飯套餐、蛋炒飯、打拋豬飯＋荷包蛋、珍珠奶茶、風景），以 PHP GD 縮成長邊 1600px、品質 82 的 JPEG（約 210～550KB），模擬前端壓縮。使用者的真實照片尚未測。
+- 條件：同一份提示詞與 schema、`thinkingLevel = low`、temperature 0.2；本地 WSL 連線，免費層金鑰。
+- 金鑰可用模型中，`gemini-2.5-flash` 回 404（新使用者不再提供）；`gemini-3.8-flash` 連續 4 次 503 過載；`gemini-flash-latest` 90 秒沒有回應；`minimal` 思考程度在 3.8 不支援。
+
+| 模型 | 成功 | 平均耗時 | 最久 | 平均 token（入／出） | 觀察 |
+|---|---|---|---|---|---|
+| `gemini-3.1-flash-lite` | 7/7 | 3.9 秒 | 5.8 秒 | 1319／391 | 項目拆得最細（牛肉麵拆成牛肉、麵、湯、青菜；便當多列肉燥），符合提示詞；滷肉套餐的滷肉誤認成「滷雞腿肉」 |
+| `gemini-3.5-flash-lite` | 7/7 | 3.5 秒 | 5.5 秒 | 1319／232 | 最快、token 最少；牛肉麵、炒飯只列一個項目，不方便改份量 |
+| `gemini-3.5-flash` | 7/7 | 7.5 秒 | 20.6 秒 | 1319／192 | 命名最準（滷爌肉、白飯含滷汁）；但兩次超過 13 秒，離 25 秒逾時太近 |
+| `gemini-3.8-flash` | 0/4 | — | — | — | 503 過載，暫時不能用 |
+
+- 三個可用模型都正確判斷風景照「看不出食物」。
+- 補充說明有效：便當加「飯只吃一半」後白飯回 0.5 碗、140 大卡。
+- 信心度普遍偏高（主菜多為 0.9～0.95），「低」很少出現；上線後觀察，必要時調整提示詞。
+- **決定**：`GEMINI_MODEL=gemini-3.1-flash-lite`（速度穩定、項目拆得細方便修改）。之後 `gemini-3.8-flash` 不再過載、或 `gemini-3.5-flash` 速度穩定時可以再比較，只要改 env。
+
 ## 進度
 
 | Task | 狀態 |
 |---|---|
 | T1 設計 demo | 完成（2026-11-21） |
 | T2 food-analyzer 核心 | 完成（2026-11-21） |
-| T3 Gemini driver 與模型實測 | 未開始 |
+| T3 Gemini driver 與模型實測 | 完成（2026-11-21） |
 | T4 meal 模組後端 | 未開始 |
 | T5 前端實作 | 未開始 |
 | T6 測試 | 未開始 |
