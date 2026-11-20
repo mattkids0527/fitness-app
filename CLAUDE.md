@@ -68,7 +68,9 @@ CI（`.github/workflows/`）在 push/PR 到 `main`、`develop` 時執行：`lint
 - `layouts/`：頁面以 `AppLayout`（內部委派給 `layouts/app/AppSidebarLayout` 或 `AppHeaderLayout`）或 `AuthLayout`（委派給 `layouts/auth/*`）包裝；設定頁再套 `layouts/settings/Layout.vue`（分頁：個人帳號、密碼、外觀、已連結帳號；新增設定分頁改這裡的 `sidebarNavItems`）。切換整站版型時改這兩個入口檔即可。
 - `components/`：應用元件。版型：手機（< 768px）用 `AppBottomNav.vue` 底部 Tab，桌機用 `AppSidebar.vue` 側欄；`QuickAddDialog.vue`（＋選單）、`profile/WeightLogSheet.vue`、`AppToast.vue` 掛在 `layouts/app/AppSidebarLayout.vue`，開關狀態在 `composables/useQuickActions.ts`、`useToast.ts`。`ResponsiveDialog.vue` 手機為底部面板、桌機為置中對話框；`AppPage.vue` 是頁面標題＋內容容器。模組元件放 `components/<module>/`，型別放 `types/<module>.ts`。
 - 品牌色：橘色，`resources/css/app.css` 的 `--primary`（shadcn 預設按鈕即為橘色）、`--brand-soft`（選取狀態淺底，Tailwind `bg-brand-soft`）、`--page`（頁面底色，`bg-page`）。設計定稿在 `vibe-coding/ui/features/m1-account/`、`m2-google-login/`。
+- 營養素的圖示與顏色集中在 `composables/useNutrients.ts`（蛋白質 `Drumstick`／rose、碳水 `Wheat`／amber、脂肪 `Nut`／violet、纖維 `Leaf`／emerald），列表用 `components/meal/MacroValues.vue`；表單標籤用 `components/FieldLabel.vue`，必填打 `*`、選填不標示（不寫「（選填）」）。只有圖示的按鈕要加 `aria-label`，被省略的文字以 `sr-only` 保留。
 - BMR／每日目標的前端即時預覽在 `composables/useEnergyTargets.ts`，係數由後端 props（`options.calculation`）帶入，公式要與後端 `EnergyTargetCalculator` 保持一致。
+- 手機鎖住縮放：`app.blade.php`（與 `offline.html`）的 viewport `maximum-scale=1, user-scalable=no`、`app.css` 的 `html { touch-action: manipulation }`、`app.ts` 擋 iOS `gesturestart`。新增輸入框在手機上要維持 16px 以上，避免 iPhone 點擊時自動放大。
 - PWA：`public/manifest.webmanifest`、`public/sw.js`（頁面不快取、`/build/` 快取、離線顯示 `public/offline.html`）、`public/icons/`；service worker 只在正式建置註冊（`app.ts`）。改快取策略時調整 `sw.js` 的 `CACHE_VERSION`。
 - `components/ui/`：shadcn-vue 產生的元件，每個元件資料夾有 `index.ts` 匯出；`lib/utils.ts` 提供 `cn()`（clsx + tailwind-merge）。
 - `composables/useAppearance.ts`：淺色/深色/系統主題，於 `app.ts` 呼叫 `initializeTheme()`。

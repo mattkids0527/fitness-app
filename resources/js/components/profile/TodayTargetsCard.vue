@@ -2,7 +2,7 @@
 import { formatNumber } from '@/composables/useEnergyTargets';
 import { nutrientMeta } from '@/composables/useNutrients';
 import type { EnergyTargets } from '@/types/profile';
-import { Check } from 'lucide-vue-next';
+import { Check, Target, Utensils } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 const props = withDefaults(
@@ -47,12 +47,22 @@ const proteinPercent = computed(() => Math.min(100, (props.consumedProteinG / pr
                     <span class="text-[11px] text-muted-foreground">{{ over ? '超過 kcal' : '剩餘 kcal' }}</span>
                 </div>
             </div>
-            <div class="flex-1">
-                <div class="text-sm text-muted-foreground">熱量目標</div>
-                <div class="text-xl font-bold tabular-nums">{{ formatNumber(targets.calorie_target) }} kcal</div>
-                <div class="mt-2 text-sm text-muted-foreground">已攝取</div>
-                <div :class="['font-semibold tabular-nums', over ? 'text-rose-600 dark:text-rose-500' : '']">
-                    {{ formatNumber(Math.round(consumedKcal)) }} kcal
+            <div class="flex-1 space-y-2.5">
+                <div class="flex items-center gap-2">
+                    <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground"><Target class="size-4" /></span>
+                    <div class="tabular-nums">
+                        <span class="sr-only">熱量目標</span>
+                        <b class="text-lg">{{ formatNumber(targets.calorie_target) }}</b>
+                        <span class="text-xs text-muted-foreground"> kcal</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-soft text-primary"><Utensils class="size-4" /></span>
+                    <div :class="['tabular-nums', over ? 'text-rose-600 dark:text-rose-500' : '']">
+                        <span class="sr-only">已攝取</span>
+                        <b class="text-lg">{{ formatNumber(Math.round(consumedKcal)) }}</b>
+                        <span :class="['text-xs', over ? '' : 'text-muted-foreground']"> kcal</span>
+                    </div>
                 </div>
             </div>
         </div>

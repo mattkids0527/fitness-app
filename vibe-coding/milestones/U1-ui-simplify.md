@@ -1,6 +1,6 @@
 # U1 介面精簡
 
-- 狀態：進行中
+- 狀態：實作完成（T1～T4，2026-11-20），待使用者開 PR 合併 `main`、部署並在正式站驗收（含實機測縮放）後寫 handoff
 - 建立日期：2026-11-20
 - 分支：`develop`（每個 Task 完成就 commit 並 push；PR `develop` → `main` 由使用者開與合併）
 - 依據規格：[U1 介面精簡規格](../specs/2026-11-20-u1-ui-simplify.md)
@@ -42,6 +42,7 @@
 ### T4 今日頁卡片、＋選單、餐點卡、常用食物說明
 `TodayTargetsCard` 的熱量目標／已攝取改圖示；`TodayMealsCard`、`TodayWaterCard` 的列與右上連結；`QuickAddDialog` 改三欄大圖示與順序、「記錄餐點」改名；`MealCard` 拿掉項目數；常用食物頁說明框改 ⓘ。只有圖示的按鈕加 `aria-label`。（u1-04～u1-09）
 **完成條件**：同 T3；另外跑全部 PHPUnit 確認沒有受影響，主控台沒有新的警告。
+- 實作紀錄：只有圖示的連結與按鈕加 `aria-label`，被拿掉的文字（餐別、熱量目標、已攝取、即將推出）改為 `sr-only` 保留給螢幕閱讀器。常用食物頁的 ⓘ 說明點外面或按 Esc 會關閉（`@vueuse/core` 的 `onClickOutside`、`onKeyStroke`）。
 
 ### 部署備註
 只有前端與文件變更，合併到 `main` 後照常以 Actions 部署；不需要 migration，也不需要改 `provision.sh`。`/build/` 資源檔名有 hash，會自動更新；`offline.html` 是預先快取的，T2 已調整 `CACHE_VERSION`。正式站驗收後寫 handoff 並把 milestone 標為完成。
@@ -53,4 +54,4 @@
 | T1 設計 demo | 完成（2026-11-20） |
 | T2 縮放鎖定 | 完成（2026-11-20） |
 | T3 營養素圖示與表單標籤 | 完成（2026-11-20） |
-| T4 今日頁卡片、＋選單、餐點卡、常用食物說明 | 未開始 |
+| T4 今日頁卡片、＋選單、餐點卡、常用食物說明 | 完成（2026-11-20） |

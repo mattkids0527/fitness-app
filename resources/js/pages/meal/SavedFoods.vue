@@ -13,6 +13,7 @@ import { formatGrams, formatKcal } from '@/composables/useNutritionFormat';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { SavedFood } from '@/types/meal';
 import { Head, router, useForm } from '@inertiajs/vue3';
+import { onClickOutside, onKeyStroke } from '@vueuse/core';
 import { Flame, History, Info, LoaderCircle, Plus, Star, Trash2 } from 'lucide-vue-next';
 import { ref } from 'vue';
 
@@ -25,6 +26,12 @@ const editing = ref<SavedFood | null>(null);
 const formOpen = ref(false);
 const confirmOpen = ref(false);
 const deleting = ref(false);
+
+// 頁首 ⓘ 說明：點外面或按 Esc 關閉
+const infoOpen = ref(false);
+const infoRef = ref<HTMLElement | null>(null);
+onClickOutside(infoRef, () => (infoOpen.value = false));
+onKeyStroke('Escape', () => (infoOpen.value = false));
 
 const form = useForm({
     name: '',
@@ -113,8 +120,27 @@ function destroy() {
             { title: '常用食物', href: route('fitness.meal.saved_foods.index') },
         ]"
     >
-        <AppPage title="常用食物" :description="`${saved_foods.length} 項 · 依最近使用排序`" :back-href="route('fitness.meal.index')" narrow>
+        <AppPage title="常用食物" :description="`${saved_foods.length} 項`" :back-href="route('fitness.meal.index')" narrow>
             <template #actions>
+                <div ref="infoRef" class="relative">
+                    <button
+                        type="button"
+                        :class="['grid size-10 place-items-center rounded-full text-primary hover:bg-muted', infoOpen ? 'bg-brand-soft' : '']"
+                        aria-label="說明"
+                        :aria-expanded="infoOpen"
+                        aria-controls="saved-foods-info"
+                        @click="infoOpen = !infoOpen"
+                    >
+                        <Info class="size-5" />
+                    </button>
+                    <div
+                        v-if="infoOpen"
+                        id="saved-foods-info"
+                        class="absolute right-0 top-12 z-20 w-64 rounded-lg border bg-card p-3 text-sm leading-relaxed shadow-lg"
+                    >
+                        依最近使用排序。記錄餐點時按項目旁的 ☆ 也能加入。數值以「一份」為準，帶入時可以選份數。
+                    </div>
+                </div>
                 <button
                     type="button"
                     class="grid size-10 place-items-center rounded-full text-primary hover:bg-muted"
@@ -125,12 +151,7 @@ function destroy() {
                 </button>
             </template>
 
-            <div class="flex gap-2.5 rounded-lg bg-muted p-3 text-sm leading-relaxed text-muted-foreground">
-                <Info class="mt-0.5 size-4 shrink-0" />
-                <p>記錄餐點時按項目旁的 ☆ 也能加入。數值以「一份」為準，帶入時可以選份數。</p>
-            </div>
-
-            <ul v-if="saved_foods.length" class="mt-3 overflow-hidden rounded-xl border bg-card">
+            <ul v-if="saved_foods.length" class="overflow-hidden rounded-xl border bg-card">
                 <li v-for="food in saved_foods" :key="food.id" class="border-b last:border-b-0">
                     <button type="button" class="flex w-full items-center gap-3 px-3.5 py-3 text-left hover:bg-muted/50" @click="openForm(food)">
                         <div class="min-w-0 flex-1">
