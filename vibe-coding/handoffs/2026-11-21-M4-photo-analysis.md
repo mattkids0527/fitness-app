@@ -5,13 +5,13 @@
 - 依據規格：[M4 規格](../specs/2026-11-21-m4-photo-analysis.md)
 - 設計定稿：[ui/features/m4-photo-analysis](../ui/features/m4-photo-analysis/README.md)
 - 分支：`develop`
-- 目前進度：T1 demo、T2 `food-analyzer` 核心、T3 Gemini driver 與模型實測、T4 meal 模組後端完成。下一步是 T5（前端實作）。
+- 目前進度：T1 demo、T2 `food-analyzer` 核心、T3 Gemini driver 與模型實測、T4 meal 模組後端、T5 前端完成。下一步是 T6（測試，先把情境條列給使用者確認）。
 
 ## 下次接手從這裡開始
 
 1. `git checkout develop && git pull --ff-only`，`composer install`（新增了 `prism-php/prism`）、`php artisan migrate`（M4 新增 3 支 migration）。
 2. 先讀規格 §2（已決 Q1～Q10）與 §3～§6，再讀 milestone 的 T5。前端照 `vibe-coding/ui/features/m4-photo-analysis/` 的 demo 實作（`index.html` 可直接用瀏覽器打開，`app.js` 有各狀態的文案與版面），後端 props 與路由見 `packages/fitness/meal/README.md`「路由」「頁面 props」。寫程式前依 CLAUDE.md 讀 `vibe-coding/coding-style.md`。
-3. T5 要做的事（細節見 milestone）：
+3. （已完成，保留參考）T5 要做的事（細節見 milestone）：
    - `npm install browser-image-compression exifr`。
    - ＋選單 `components/QuickAddDialog.vue`：「拍照分析」拿掉，改「拍照」（`fitness.meal.analyze?mode=camera`，桌機隱藏）與「上傳照片」（`mode=upload`）兩格。
    - 新頁面 `pages/meal/Analyze.vue`：壓縮成長邊 1600px JPEG、上傳時以 `exifr` 讀 `DateTimeOriginal` 轉成使用者時區 `Y-m-d H:i` 當 `taken_at`；以 `multipart/form-data` POST `fitness.meal.analyze.store`（`photo`、`hint`、`taken_at`）；照片暫存在 composable，確認頁顯示縮圖、失敗時重送同一張。
@@ -55,6 +55,19 @@
 - migration `2026_11_21_100001`：`meals.food_analysis_id`（唯一、null on delete）、`meal_items.confidence`。
 - 失敗 flash `error` 為 `{code, title, message, remaining}`；前端 `FlashError` 型別在 T5 補 `code`、`remaining`。`code` 為 `daily_limit`、`unavailable`、`no_food`、`rate_limited`、`timeout`、`failed`，`no_food` 時主按鈕改「重拍／換一張」。
 - 飲食頁、今日頁的餐點摘要多 `source`（`manual`／`ai`），T5 用來標「照片」。
+
+## T5 完成內容（2026-11-21）
+
+- `npm install browser-image-compression exifr`（`composables/useMealPhoto.ts` 動態載入，不進主要 bundle；壓縮不用 Web Worker，避免從 CDN 載入）。
+- ＋選單 `QuickAddDialog.vue`：「拍照」（`md:hidden`，`capture="environment"`）、「上傳照片」兩格，是包著 file input 的 label，選好照片才 `router.visit` 分析頁；有「新」標記。
+- `pages/meal/Analyze.vue`：照片預覽（拍照／拍攝時間標籤、重拍／換一張）、補充說明、剩餘次數、分析中掃描動畫與取消、失敗依 flash `error.code` 切換（`no_food` 主按鈕換照片、`daily_limit`／剩餘 0 只留改手動輸入）、驗證錯誤顯示在照片下方。
+- `pages/meal/Form.vue`：`analysis` 不為 null 時標題「確認分析結果」、摘要卡（縮圖只在暫存照片屬於這筆分析時顯示）、拍攝時間提示、離開詢問（Inertia `before` 事件＋`beforeunload`）、手機把快速帶入與備註排到項目後面；送出帶 `food_analysis_id` 與項目 `confidence`；加 `FlashAlert`（同一筆分析重複存檔導向編輯頁的提示）。
+- `components/meal/ConfidenceBadge.vue`、`composables/useConfidence.ts`；`MealItemCard` 顯示信心度，「低」橘框＋展開提醒；複製整餐、常用食物帶入的項目沒有信心度，加入常用食物時不送 `confidence`。
+- `MealCard` 在 `source === 'ai'` 時於時間旁標「照片」；型別 `types/meal.ts`（`MealSource`、`MealItemValues`、`MealAnalysisSummary`、`AnalysisQuota`、`AnalyzeMode`），`FlashError` 補 `code?`、`remaining?`。
+- 順手修正：`meal/Form`、`meal/Index`、`daily-summary/Today` 的 grid 在手機加 `grid-cols-1`，長餐點名稱不再把頁面撐寬（M3 既有問題）。
+- 已知限制：瀏覽器上一頁／iOS 滑動返回不會觸發離開詢問（Inertia 不對 popstate 發 `before`）；確認頁重新整理後縮圖改顯示圖示（照片只在記憶體）。
+- 本地驗證用無頭 Chromium（`~/.cache/ms-playwright/chromium-1234` ＋ scratchpad 的 `playwright-core`），Chrome 擴充當時沒連上。真實呼叫 Gemini 一次（非食物圖 → 看不出食物）；本地 `food_analyses` id 5 仍是未使用的成功分析，可以直接開 `/meals/create?analysis=5` 看確認頁。
+- 專案的 `vue-tsc` 本來就有很多型別錯誤（`useForm` 與 `SharedData` 型別），這次沒有新增不同種類的錯誤；CI 只跑 build、lint、format。
 
 ## T6 測試情境參考
 

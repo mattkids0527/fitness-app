@@ -21,7 +21,7 @@ defineProps<{
     <Head title="今日" />
     <AppLayout :breadcrumbs="[{ title: '今日', href: route('fitness.daily_summary.show') }]">
         <AppPage title="今日" :description="longDate(date)">
-            <div class="grid gap-3 md:grid-cols-2 md:items-start">
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2 md:items-start">
                 <div class="space-y-3">
                     <TodayTargetsCard
                         v-if="sections.profile?.targets"

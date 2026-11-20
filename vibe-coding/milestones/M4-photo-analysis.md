@@ -1,6 +1,6 @@
 # M4 Gemini 照片分析
 
-- 狀態：進行中（2026-11-21 T4 完成；下一步 T5。交接見 [handoff](../handoffs/2026-11-21-M4-photo-analysis.md)）
+- 狀態：進行中（2026-11-21 T5 完成；下一步 T6。交接見 [handoff](../handoffs/2026-11-21-M4-photo-analysis.md)）
 - 建立日期：2026-11-21
 - 分支：`develop`（每個 Task 完成就 commit 並 push；PR `develop` → `main` 由使用者開與合併）
 - 依據規格：[M4 照片分析規格](../specs/2026-11-21-m4-photo-analysis.md)
@@ -47,9 +47,10 @@ migration：`meals.food_analysis_id`（可 null，null on delete）、`meal_item
 **完成條件**：pint 通過；以 Fake driver 從本地手動走完上傳 → 確認 → 存檔，資料正確，`storage/` 沒有新增檔案。
 **實作補充**：分析頁 `GET /meals/analyze?mode=camera|upload`（`meal/Analyze`，頁面檔在 T5 建立）。拍攝時間由前端隨分析送出 `taken_at`，再帶到確認頁 `create?analysis={id}&taken_at=`，伺服器據此決定日期、時間與餐別（未來時間或格式不對改用現在）；確認頁 props 多 `analysis`（項目數、補充說明、`time_source`、`quota`）。同一筆分析重複存檔或重新打開確認頁時，導向已建立那一餐的編輯頁並帶 flash `error`。信心度只存在 `source = ai` 的餐點，複製整餐不帶信心度。驗證方式：在 scratchpad 寫一支不進 repo 的 HTTP 流程測試（Fake driver，92 個斷言）走完上傳 → 確認 → 存檔 → 重複存檔 → 失敗與上限 → 他人分析 404，`storage/` 前後比對沒有新增檔案；正式測試在 T6 依確認的情境撰寫。
 
-### T5 前端實作
+### T5 前端實作（完成）
 ＋選單：「拍照分析」拿掉，改成「拍照」（`capture="environment"`，桌機隱藏）與「上傳照片」兩格。分析頁 `pages/meal/Analyze.vue`：`browser-image-compression` 壓縮、`exifr` 讀拍攝時間（上傳）、預覽、重拍／換一張、補充說明（200 字）、剩餘次數、分析中（掃描動畫、取消）、失敗與次數用完的畫面；照片暫存在 composable（瀏覽器記憶體），跨頁到確認頁顯示縮圖。確認頁沿用 `pages/meal/Form.vue`：分析摘要卡、信心度標籤（`components/meal/ConfidenceBadge.vue`）、低信心提醒、時間依拍攝時間帶入的提示、離開時詢問放棄。飲食頁 `MealCard` 標「照片」。照 demo 實作，型別放 `types/meal.ts`。
 **完成條件**：build、lint、format:check 通過；390px 與桌機、淺色與深色對照 demo 確認；iPhone／Android 實機另在 T7 驗收。
+**實作補充**：＋選單的「拍照」「上傳照片」是包著隱藏 `<input type="file">` 的 label，選好照片才進分析頁（保留使用者手勢，手機直接開相機；取消選擇不換頁）；直接開分析頁沒有照片時顯示選照片的空白狀態。照片暫存在 `composables/useMealPhoto.ts`（預覽網址、拍攝時間、壓縮後檔案、所屬分析 id），`exifr` 與 `browser-image-compression` 改為動態載入，壓縮不用套件的 Web Worker（它會從 CDN 載入程式）。分析成功時從導向網址記下 `analysis` id，確認頁只在 id 相同時顯示縮圖（重新整理後改顯示圖示）。分析頁離開（往其他頁面的 GET）、改手動輸入、確認頁存檔或放棄時丟棄照片。確認頁以 Inertia `before` 事件攔截離開（送出表單與 `only` 局部重新載入不攔）並加 `beforeunload`；瀏覽器上一頁（popstate）攔不到。信心度分級在 `composables/useConfidence.ts`。順手修正：表單、飲食頁、今日頁的 grid 在手機加 `grid-cols-1`，避免很長的餐點名稱把頁面撐寬（M3 就有，這次加信心度標籤後在確認頁出現）。驗證：無頭 Chromium 截 390px／1280px、淺色／深色各畫面；真實呼叫 Gemini 一次（非食物圖）確認分析中與「看不出食物」畫面；以本地分析紀錄存檔確認 `source = ai`、信心度保留（測試餐點已刪除）；PHPUnit 128 個通過。
 
 ### T6 測試
 先把測試情境條列給使用者確認，再撰寫並記錄到 `vibe-coding/tests/`。範圍：`food-analyzer`（每日上限與切日、成功與各種失敗都寫紀錄、超過上限不呼叫 driver）、`food-analyzer-gemini`（以 Prism fake 驗證請求內容與回應解析、錯誤轉換）、`meal`（上傳驗證、照片沒有寫入 Storage、導向確認頁、只能讀自己的分析、建立餐點帶 `source`／`confidence`／`food_analysis_id`、同一筆分析不能建立兩次）。
@@ -85,6 +86,6 @@ migration：`meals.food_analysis_id`（可 null，null on delete）、`meal_item
 | T2 food-analyzer 核心 | 完成（2026-11-21） |
 | T3 Gemini driver 與模型實測 | 完成（2026-11-21） |
 | T4 meal 模組後端 | 完成（2026-11-21） |
-| T5 前端實作 | 未開始 |
+| T5 前端實作 | 完成（2026-11-21） |
 | T6 測試 | 未開始 |
 | T7 部署 v1.4.0 與驗收 | 未開始 |

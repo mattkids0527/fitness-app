@@ -103,7 +103,7 @@ function destroy() {
                 </button>
             </div>
 
-            <div class="mt-2 grid gap-5 md:grid-cols-[320px_1fr] md:items-start">
+            <div class="mt-2 grid grid-cols-1 gap-5 md:grid-cols-[320px_1fr] md:items-start">
                 <div>
                     <MealTotalsCard
                         :date="date"
