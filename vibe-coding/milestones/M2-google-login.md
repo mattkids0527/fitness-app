@@ -56,7 +56,7 @@
 
 | Task | 狀態 |
 |---|---|
-| T1 設計 demo | 未開始 |
+| T1 設計 demo | 完成（2026-11-20） |
 | T2 social-login 核心與後端 | 未開始 |
 | T3 social-login-google driver | 未開始 |
 | T4 前端實作 | 未開始 |

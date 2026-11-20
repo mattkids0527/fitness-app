@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-TW">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>M2 Google 登入 demo</title>
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+        <!-- demo 工具列：切換畫面、情境、裝置與主題，不屬於產品畫面 -->
+        <header class="toolbar">
+            <h1>M2 Google 登入 demo</h1>
+            <div class="group" id="tb-screens"></div>
+            <div class="group" id="tb-scenarios"></div>
+            <div class="group">
+                <span class="group-label">裝置</span>
+                <button data-viewport="mobile">手機</button>
+                <button data-viewport="desktop">桌機</button>
+            </div>
+            <div class="group">
+                <span class="group-label">主題</span>
+                <button data-theme-btn="light">淺色</button>
+                <button data-theme-btn="dark">深色</button>
+            </div>
+            <div class="group">
+                <button id="tb-reset">重設資料</button>
+            </div>
+        </header>
+
+        <main class="stage">
+            <div class="device mobile" id="device"><div class="app" id="app"></div></div>
+        </main>
+
+        <section class="notes">
+            <h2>說明</h2>
+            <ul>
+                <li>「Google 回應」模擬從 Google 回到網站時的結果：授權成功／這個 Google 帳號已被其他帳號連結（只影響連結）／使用者按取消（或 state 不符）。登入時是否成功看「連結狀態」。</li>
+                <li>登入頁：Google 帳號已連結 → 進今日頁（未完成首次設定的照樣導向首次設定）；未連結 → 頁內錯誤提示；不會建立帳號、不會用 email 自動綁定。</li>
+                <li>用 Google 登入一律「記住我」，帳密登入仍依勾選。</li>
+                <li>成功結果（已連結、已解除連結）用既有的 Toast；失敗結果用頁內錯誤提示，不會自動消失，方便看完較長的說明。</li>
+                <li>「Google 設定：未設定」表示 .env 沒有 GOOGLE_CLIENT_ID：登入頁不顯示 Google 按鈕，已連結帳號頁顯示「目前沒有可連結的服務」。</li>
+                <li>Google 頭像只在已連結帳號頁顯示（demo 以字母圓圈代替實際照片），不當站內大頭貼。</li>
+                <li>設定頁的分頁與標題沿用 starter kit 的 settings Layout：手機在上方、寬度 1024px 以上改到左側。</li>
+            </ul>
+        </section>
+
+        <script src="app.js"></script>
+    </body>
+</html>
