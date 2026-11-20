@@ -105,6 +105,19 @@ class VersionTest extends TestCase
             ]));
     }
 
+    public function test_me_page_shows_app_version(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        $this->get(route('fitness.profile.show'))
+            ->assertInertia(fn (Assert $page) => $page->component('profile/Show')->where('appVersion', null));
+
+        $this->writeVersionFile(['version' => 'v1.3.0', 'commit' => 'd974e73', 'deployed_at' => '2026-11-21T06:30:00Z']);
+
+        $this->get(route('fitness.profile.show'))
+            ->assertInertia(fn (Assert $page) => $page->component('profile/Show')->where('appVersion', 'v1.3.0'));
+    }
+
     /**
      * 寫入測試用的版本資訊檔。
      *
