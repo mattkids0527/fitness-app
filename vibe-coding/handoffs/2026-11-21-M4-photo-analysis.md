@@ -9,10 +9,18 @@
 
 ## 下次接手從這裡開始
 
-1. `git checkout develop && git pull --ff-only`。
-2. 先讀規格 §2（已決 Q1～Q10）與 §3～§6，再讀 milestone 的 T5，前端照 `vibe-coding/ui/features/m4-photo-analysis/` 的 demo 實作，後端 props 見 `packages/fitness/meal/README.md`「頁面 props」。寫程式前依 CLAUDE.md 讀 `vibe-coding/coding-style.md`；driver 寫法參考 `social-login-google`，核心合約見 `packages/fitness/food-analyzer/README.md`。
-3. 每個 Task 完成就 commit 並 push，再詢問是否進行下一個 Task。
-4. 本地 `.env` 已有 `GEMINI_API_KEY`（使用者提供）、`GEMINI_MODEL=gemini-3.1-flash-lite`、`GEMINI_THINKING_LEVEL=low`；真的打 API 會用掉 Gemini 免費額度與當天 20 次上限，T4 手動測試請用 `FOOD_ANALYZER_DRIVER=fake`（需在 `.env` 暫時改，並在 tinker／測試綁定 `FakeFoodAnalyzer`）或少量呼叫。
+1. `git checkout develop && git pull --ff-only`，`composer install`（新增了 `prism-php/prism`）、`php artisan migrate`（M4 新增 3 支 migration）。
+2. 先讀規格 §2（已決 Q1～Q10）與 §3～§6，再讀 milestone 的 T5。前端照 `vibe-coding/ui/features/m4-photo-analysis/` 的 demo 實作（`index.html` 可直接用瀏覽器打開，`app.js` 有各狀態的文案與版面），後端 props 與路由見 `packages/fitness/meal/README.md`「路由」「頁面 props」。寫程式前依 CLAUDE.md 讀 `vibe-coding/coding-style.md`。
+3. T5 要做的事（細節見 milestone）：
+   - `npm install browser-image-compression exifr`。
+   - ＋選單 `components/QuickAddDialog.vue`：「拍照分析」拿掉，改「拍照」（`fitness.meal.analyze?mode=camera`，桌機隱藏）與「上傳照片」（`mode=upload`）兩格。
+   - 新頁面 `pages/meal/Analyze.vue`：壓縮成長邊 1600px JPEG、上傳時以 `exifr` 讀 `DateTimeOriginal` 轉成使用者時區 `Y-m-d H:i` 當 `taken_at`；以 `multipart/form-data` POST `fitness.meal.analyze.store`（`photo`、`hint`、`taken_at`）；照片暫存在 composable，確認頁顯示縮圖、失敗時重送同一張。
+   - 失敗畫面依 flash `error.code` 切換（見下方 T4）；`types/index.ts` 的 `FlashError` 補 `code?`、`remaining?`。
+   - 確認頁沿用 `pages/meal/Form.vue`：`analysis` 不為 null 時顯示摘要卡（縮圖、`item_count`、`hint`）、`time_source = photo` 的提示、信心度標籤 `components/meal/ConfidenceBadge.vue`（高 ≥ 0.75、中 ≥ 0.5、低 < 0.5）、離開詢問；送出時帶 `food_analysis_id` 與各項目的 `confidence`。編輯 AI 餐點時也要把 `confidence` 送回去才會保留。
+   - 飲食頁 `MealCard` 在 `source === 'ai'` 時標「照片」；型別放 `types/meal.ts`。
+   - 完成條件：`npm run build`、`npm run lint`、`npm run format:check` 通過，390px 與桌機、淺色與深色對照 demo。
+4. 本地 `.env` 已有 `GEMINI_API_KEY`（使用者提供，不要印出或寫進文件）、`GEMINI_MODEL=gemini-3.1-flash-lite`、`GEMINI_THINKING_LEVEL=low`、`FOOD_ANALYZER_*`。在瀏覽器測 T5 會真的呼叫 Gemini，每次算一次每日上限（本地可暫時調高 `FOOD_ANALYZER_DAILY_LIMIT`）。`FakeFoodAnalyzer` 只在測試 autoload（`tests/`），沒辦法只靠 `.env` 切成假分析；後端流程請用 PHPUnit 驗證。
+5. 每個 Task 完成就 commit 並 push，再詢問是否進行下一個 Task。T6 寫測試前要先把情境條列給使用者確認。
 5. `develop` 上還有一個沒部署的小改動：未綁定 Google 登入的錯誤說明加上「還沒有帳號的話，請聯絡管理員。」（見 [D2 handoff](2026-11-21-D2-release-versioning.md)）。如果使用者在 M4 完成前想先上線，以 `v1.3.4` 部署；否則跟著 M4 一起以 `v1.4.0` 上線。
 
 ## 重要決定（跟總覽規格不同的地方）
@@ -48,7 +56,30 @@
 - 失敗 flash `error` 為 `{code, title, message, remaining}`；前端 `FlashError` 型別在 T5 補 `code`、`remaining`。`code` 為 `daily_limit`、`unavailable`、`no_food`、`rate_limited`、`timeout`、`failed`，`no_food` 時主按鈕改「重拍／換一張」。
 - 飲食頁、今日頁的餐點摘要多 `source`（`manual`／`ai`），T5 用來標「照片」。
 
-## 這次 session 的其他變更
+## T6 測試情境參考
+
+T4 時在 scratchpad 寫過一支不進 repo 的 HTTP 流程測試（Fake driver，全部通過），T6 可以從這些情境出發，再補 `food-analyzer` 單元與 Gemini driver（Prism fake）的情境，條列給使用者確認後再寫：
+
+- 分析頁帶 `mode`、`quota`；上傳成功導向 `create?analysis=&taken_at=`，driver 收到補充說明與 MIME
+- 確認頁依拍攝時間帶入日期／時間／餐別，`time_source = photo`；拍攝時間在未來改用現在，`time_source = now`
+- 確認頁項目帶信心度、`quota.remaining` 扣一次
+- 存檔建立 `source = ai`、`food_analysis_id`，項目信心度保留，新加的項目為 null
+- 重複存檔、重新打開確認頁 → 導向該餐編輯頁並帶 flash `error`；資料庫只有一餐
+- 編輯 AI 餐點後信心度保留；手動餐點不存信心度
+- 看不出食物、Gemini 忙碌 → 回分析頁，flash `error` 帶 `code` 與 `remaining`
+- 照片類型錯誤、超過 5MB → 驗證錯誤
+- 別人的分析：確認頁 404、帶 `food_analysis_id` 存檔驗證錯誤
+- 每日上限用完 → `daily_limit`，不呼叫 driver
+- `storage/` 沒有新增檔案（測試可用 `Storage::fake()` 斷言沒有檔案）
+
+## 這次 session（2026-11-21，T2～T4）
+
+- T2：`food-analyzer` 核心；使用者要求新增 `llm-log` 模組記錄 LLM 呼叫與完整 prompt；每日上限走 env。
+- T3：Gemini driver；使用者提供 API 金鑰，實測選定 `gemini-3.1-flash-lite`（`gemini-2.5-flash` 已不提供給新使用者、`gemini-3.8-flash` 一直 503）。
+- T4：meal 模組後端，用 Fake driver 走完整個流程。
+- commit：`46c7ebc`（T2）、`98a1507`（llm-log）、`d898fe1`（T3）、`18a09a3`（T4），都已 push 到 `origin/develop`。CI 結果沒有另外查看。
+
+## 先前 session 的其他變更
 
 - D2 收尾：milestone 標完成、寫 handoff；文件更正第一個 tag 是 `v1.3.1`（不是 `v1.3.0`）。
 - 使用者確認：超過熱量目標變紅的畫面 OK、03:00 自動備份正常、iOS PWA 下 Google 登入與解除綁定正常。
