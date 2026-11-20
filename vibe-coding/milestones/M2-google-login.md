@@ -1,6 +1,6 @@
 # M2 Google 登入
 
-- 狀態：Task 全部完成（待真實 Google 驗收、開 PR 合回 main）
+- 狀態：完成（2026-11-20，已以 `--no-ff` 合回本地 `main`）
 - 建立日期：2026-11-20
 - 分支：`milestone/M2-google-login`（完成後開 PR 合回 `main`）
 - 依據規格：[M2 Google 登入規格](../specs/2026-11-20-m2-google-login.md)、[專案總覽規格 v1.0](../specs/2026-11-19-project-overview.md) §3.1、§2.4
@@ -59,5 +59,5 @@
 | T1 設計 demo | 完成（2026-11-20） |
 | T2 social-login 核心與後端 | 完成（2026-11-20） |
 | T3 social-login-google driver | 完成（2026-11-20） |
-| T4 前端實作 | 完成（2026-11-20；真實 Google 驗收待憑證） |
+| T4 前端實作 | 完成（2026-11-20；使用者已以真實 Google 帳號驗收） |
 | T5 測試 | 完成（2026-11-20） |

@@ -2,14 +2,17 @@
 
 - 更新日期：2026-11-20
 - 對應任務：[M2 Google 登入](../milestones/M2-google-login.md)
-- 分支：`milestone/M2-google-login`
-- 目前進度：T1～T5 全部完成（T4 的真實 Google 點擊驗收待使用者建立憑證）；下一步 push 分支並開 PR 合回 `main`。
+- 分支：`milestone/M2-google-login`（已以 `--no-ff` merge commit 合回本地 `main`，**尚未 push**）
+- 目前進度：M2 全部完成（T1～T5）。使用者已在本地以真實 Google 帳號驗收：連結 → Google 登入 → 解除連結 → 未連結時登入被拒，皆正常。
 
 ## 下次接手從這裡開始
 
-1. 確認在 `milestone/M2-google-login` 分支；`docker compose up -d` 啟動資料庫。
-2. 拉下來後要 `composer install`（新增 `laravel/socialite`）、`composer dump-autoload`（新增 `Fitness\SocialLogin`、`Fitness\SocialLoginGoogle` 與 `autoload.files` 的 helper）並 `php artisan migrate`（新表 `social_accounts`）。
-3. 實際點擊驗收前：依 `packages/fitness/social-login-google/README.md` 建立 Google 憑證填入 `.env`；目前本機 `.env` 的 `APP_URL=http://localhost`（沒有 `:8000`），要改成 `http://localhost:8000` 或直接填完整的 `GOOGLE_REDIRECT_URI`，否則 Google 會回 `redirect_uri_mismatch`。
+1. `git checkout main`，確認 M2 的 merge commit 在 `main` 上；`docker compose up -d` 啟動資料庫。
+2. 拉下來後要 `composer install`（新增 `laravel/socialite`）、`composer dump-autoload`（新增 `Fitness\SocialLogin`、`Fitness\SocialLoginGoogle` 與 `autoload.files` 的 helper）、`php artisan migrate`（新表 `social_accounts`）。本地開發帳號：`.env` 填 `DEV_ACCOUNT_*` 後 `php artisan db:seed`。
+3. **尚未 push**：這台機器沒有 `gh`，M1、M2 都是在本地合回 `main`，CI（Pint、Prettier、ESLint、PHPUnit on PHP 8.4）還沒在 GitHub 上跑過 M2。push `main` 後留意 CI 結果；本地已全部通過（91 tests）。
+4. 本地 Google 驗收用的設定：`APP_URL=http://127.0.0.1:8889`、`GOOGLE_REDIRECT_URI="${APP_URL}/auth/google/callback"`，Google Cloud Console 的重新導向 URI 需與之一致。
+5. 部署到正式站時要另外驗證（寫部署規格時整理）：正式網域的 https 重新導向 URI、OAuth 同意畫面發布為正式版、HTTPS／proxy 與 session cookie 設定、`config:cache`、**iOS 加到主畫面（PWA standalone）實機測 Google 登入**（規格 §7 風險）。建議正式站使用獨立的 OAuth 用戶端。
+6. 待決（使用者尚未回覆）：未綁定的 Google 登入錯誤說明是否加上「還沒有帳號的話，請聯絡管理員」（改 `FitnessSocialLogin::errors.not_linked.message` 與對應測試）。
 
 ## T1 設計 demo
 
