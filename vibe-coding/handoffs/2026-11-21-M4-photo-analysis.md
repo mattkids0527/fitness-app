@@ -5,12 +5,12 @@
 - 依據規格：[M4 規格](../specs/2026-11-21-m4-photo-analysis.md)
 - 設計定稿：[ui/features/m4-photo-analysis](../ui/features/m4-photo-analysis/README.md)
 - 分支：`develop`
-- 目前進度：T1 demo、T2 `food-analyzer` 核心、T3 Gemini driver 與模型實測完成。下一步是 T4（meal 模組後端）。
+- 目前進度：T1 demo、T2 `food-analyzer` 核心、T3 Gemini driver 與模型實測、T4 meal 模組後端完成。下一步是 T5（前端實作）。
 
 ## 下次接手從這裡開始
 
 1. `git checkout develop && git pull --ff-only`。
-2. 先讀規格 §2（已決 Q1～Q10）與 §3～§6，再讀 milestone 的 T4。寫程式前依 CLAUDE.md 讀 `vibe-coding/coding-style.md`；driver 寫法參考 `social-login-google`，核心合約見 `packages/fitness/food-analyzer/README.md`。
+2. 先讀規格 §2（已決 Q1～Q10）與 §3～§6，再讀 milestone 的 T5，前端照 `vibe-coding/ui/features/m4-photo-analysis/` 的 demo 實作，後端 props 見 `packages/fitness/meal/README.md`「頁面 props」。寫程式前依 CLAUDE.md 讀 `vibe-coding/coding-style.md`；driver 寫法參考 `social-login-google`，核心合約見 `packages/fitness/food-analyzer/README.md`。
 3. 每個 Task 完成就 commit 並 push，再詢問是否進行下一個 Task。
 4. 本地 `.env` 已有 `GEMINI_API_KEY`（使用者提供）、`GEMINI_MODEL=gemini-3.1-flash-lite`、`GEMINI_THINKING_LEVEL=low`；真的打 API 會用掉 Gemini 免費額度與當天 20 次上限，T4 手動測試請用 `FOOD_ANALYZER_DRIVER=fake`（需在 `.env` 暫時改，並在 tinker／測試綁定 `FakeFoodAnalyzer`）或少量呼叫。
 5. `develop` 上還有一個沒部署的小改動：未綁定 Google 登入的錯誤說明加上「還沒有帳號的話，請聯絡管理員。」（見 [D2 handoff](2026-11-21-D2-release-versioning.md)）。如果使用者在 M4 完成前想先上線，以 `v1.3.4` 部署；否則跟著 M4 一起以 `v1.4.0` 上線。
@@ -40,6 +40,13 @@
 - 模型實測結果與選定模型 `gemini-3.1-flash-lite` 記在 milestone「模型實測」。用的是 Wikimedia 公開照片，使用者的真實照片還沒測，T7 驗收時順便看。
 - 本地開發庫留有 3 筆真實呼叫紀錄（`llm_logs` 3～5），可以看 `content` 的 prompt 長相。
 - Driver 的自動測試（Prism fake）在 T6 寫。
+
+## T4 完成內容（2026-11-21）
+
+- 路由：`GET/POST /meals/analyze`（`MealAnalysisController`），確認頁沿用 `GET /meals/create?analysis={id}&taken_at=`。`meal/Analyze.vue` 還不存在，T5 建立前打開分析頁會出錯。
+- migration `2026_11_21_100001`：`meals.food_analysis_id`（唯一、null on delete）、`meal_items.confidence`。
+- 失敗 flash `error` 為 `{code, title, message, remaining}`；前端 `FlashError` 型別在 T5 補 `code`、`remaining`。`code` 為 `daily_limit`、`unavailable`、`no_food`、`rate_limited`、`timeout`、`failed`，`no_food` 時主按鈕改「重拍／換一張」。
+- 飲食頁、今日頁的餐點摘要多 `source`（`manual`／`ai`），T5 用來標「照片」。
 
 ## 這次 session 的其他變更
 

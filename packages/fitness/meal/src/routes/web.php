@@ -1,5 +1,6 @@
 <?php
 
+use Fitness\Meal\Http\Controllers\MealAnalysisController;
 use Fitness\Meal\Http\Controllers\MealController;
 use Fitness\Meal\Http\Controllers\SavedFoodController;
 use Illuminate\Support\Facades\Route;
@@ -14,6 +15,8 @@ Route::middleware(['web', 'auth'])
         Route::get('/', [MealController::class, 'index'])->name('index');
         Route::get('create', [MealController::class, 'create'])->name('create');
         Route::post('/', [MealController::class, 'store'])->name('store');
+        Route::get('analyze', [MealAnalysisController::class, 'show'])->name('analyze');
+        Route::post('analyze', [MealAnalysisController::class, 'store'])->name('analyze.store');
         Route::get('{meal}/edit', [MealController::class, 'edit'])->whereNumber('meal')->name('edit');
         Route::put('{meal}', [MealController::class, 'update'])->whereNumber('meal')->name('update');
         Route::delete('{meal}', [MealController::class, 'destroy'])->whereNumber('meal')->name('destroy');

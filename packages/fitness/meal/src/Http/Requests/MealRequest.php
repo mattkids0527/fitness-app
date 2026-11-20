@@ -10,6 +10,7 @@ use Illuminate\Validation\Rule;
 
 /**
  * 新增／修改餐點的驗證：日期不能晚於使用者時區的今天，至少一個項目，名稱與熱量必填。
+ * 由照片分析建立時帶 food_analysis_id 與項目的 confidence（只在新增時使用 food_analysis_id）。
  */
 class MealRequest extends FormRequest
 {
@@ -38,6 +39,8 @@ class MealRequest extends FormRequest
             'items' => ['required', 'array', 'min:1', 'max:'.config('fitness.meal.max_items')],
             ...$this->foodRules('items.*.'),
             'items.*.saved_food_id' => ['nullable', 'integer'],
+            'items.*.confidence' => ['nullable', 'numeric', 'between:0,1'],
+            'food_analysis_id' => ['nullable', 'integer'],
         ];
     }
 
@@ -68,6 +71,8 @@ class MealRequest extends FormRequest
             'note' => trans('FitnessMeal::attributes.note'),
             'items' => trans('FitnessMeal::attributes.items'),
             ...$this->foodAttributes('items.*.'),
+            'items.*.confidence' => trans('FitnessMeal::attributes.confidence'),
+            'food_analysis_id' => trans('FitnessMeal::attributes.food_analysis_id'),
         ];
     }
 }

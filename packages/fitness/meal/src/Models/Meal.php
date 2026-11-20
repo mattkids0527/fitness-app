@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * 一餐：用餐時間、餐別與多個食物項目。統計只計算已確認（confirmed）的餐點。
+ * 由照片分析建立的餐點 source 為 ai，並以 food_analysis_id 記錄來自哪一筆分析。
  */
 class Meal extends Model
 {
@@ -22,6 +23,8 @@ class Meal extends Model
 
     const SOURCE_MANUAL = 'manual';
 
+    const SOURCE_AI = 'ai';
+
     const STATUS_CONFIRMED = 'confirmed';
 
     protected $fillable = [
@@ -31,6 +34,7 @@ class Meal extends Model
         'source',
         'status',
         'note',
+        'food_analysis_id',
     ];
 
     /**
@@ -63,6 +67,14 @@ class Meal extends Model
     public function isConfirmed(): bool
     {
         return $this->status === self::STATUS_CONFIRMED;
+    }
+
+    /**
+     * 是否由照片分析建立。
+     */
+    public function isFromPhoto(): bool
+    {
+        return $this->source === self::SOURCE_AI;
     }
 
     /*

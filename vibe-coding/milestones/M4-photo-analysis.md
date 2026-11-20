@@ -1,6 +1,6 @@
 # M4 Gemini 照片分析
 
-- 狀態：進行中（2026-11-21 T3 完成；下一步 T4。交接見 [handoff](../handoffs/2026-11-21-M4-photo-analysis.md)）
+- 狀態：進行中（2026-11-21 T4 完成；下一步 T5。交接見 [handoff](../handoffs/2026-11-21-M4-photo-analysis.md)）
 - 建立日期：2026-11-21
 - 分支：`develop`（每個 Task 完成就 commit 並 push；PR `develop` → `main` 由使用者開與合併）
 - 依據規格：[M4 照片分析規格](../specs/2026-11-21-m4-photo-analysis.md)
@@ -42,9 +42,10 @@
 **完成條件**：本地以真實 API 分析成功；實測結果與選定模型寫入本檔。**需要使用者**：到 Google AI Studio 申請 API 金鑰填進本地 `.env`，並提供或同意使用測試照片。
 **實作補充**：Prism `^0.103`；Gemini 3 以後的思考程度以 `GEMINI_THINKING_LEVEL`（預設 `low`）設定，不設時 `gemini-3.8-flash` 超過 25 秒；503 過載也視為「Gemini 暫時忙碌」；失敗但沒有回應時，錯誤訊息存進 `llm_logs.response.error_message`。結果見下方「模型實測」。
 
-### T4 `meal` 模組後端
+### T4 `meal` 模組後端（完成）
 migration：`meals.food_analysis_id`（可 null，null on delete）、`meal_items.confidence`（可 null）。路由：`POST /meals/analyze`（照片＋補充說明，驗證 jpeg／png／webp、5MB 以內，只在記憶體讀取不呼叫 `store()`）；成功後導向 `GET /meals/create?analysis={id}`，由伺服器讀回該筆分析（只能讀自己的、尚未建立餐點的）帶入表單 defaults，重新整理也不會遺失結果；失敗以 `back()->with('error', ...)` 回傳失敗種類與今日剩餘次數。`store` 接受 `food_analysis_id` 與項目 `confidence`，設定 `source = ai`；同一筆分析只能建立一次餐點。飲食頁與今日頁的餐點資料帶 `source`。分析頁與確認頁的 props 帶今日剩餘次數。
 **完成條件**：pint 通過；以 Fake driver 從本地手動走完上傳 → 確認 → 存檔，資料正確，`storage/` 沒有新增檔案。
+**實作補充**：分析頁 `GET /meals/analyze?mode=camera|upload`（`meal/Analyze`，頁面檔在 T5 建立）。拍攝時間由前端隨分析送出 `taken_at`，再帶到確認頁 `create?analysis={id}&taken_at=`，伺服器據此決定日期、時間與餐別（未來時間或格式不對改用現在）；確認頁 props 多 `analysis`（項目數、補充說明、`time_source`、`quota`）。同一筆分析重複存檔或重新打開確認頁時，導向已建立那一餐的編輯頁並帶 flash `error`。信心度只存在 `source = ai` 的餐點，複製整餐不帶信心度。驗證方式：在 scratchpad 寫一支不進 repo 的 HTTP 流程測試（Fake driver，92 個斷言）走完上傳 → 確認 → 存檔 → 重複存檔 → 失敗與上限 → 他人分析 404，`storage/` 前後比對沒有新增檔案；正式測試在 T6 依確認的情境撰寫。
 
 ### T5 前端實作
 ＋選單：「拍照分析」拿掉，改成「拍照」（`capture="environment"`，桌機隱藏）與「上傳照片」兩格。分析頁 `pages/meal/Analyze.vue`：`browser-image-compression` 壓縮、`exifr` 讀拍攝時間（上傳）、預覽、重拍／換一張、補充說明（200 字）、剩餘次數、分析中（掃描動畫、取消）、失敗與次數用完的畫面；照片暫存在 composable（瀏覽器記憶體），跨頁到確認頁顯示縮圖。確認頁沿用 `pages/meal/Form.vue`：分析摘要卡、信心度標籤（`components/meal/ConfidenceBadge.vue`）、低信心提醒、時間依拍攝時間帶入的提示、離開時詢問放棄。飲食頁 `MealCard` 標「照片」。照 demo 實作，型別放 `types/meal.ts`。
@@ -83,7 +84,7 @@ migration：`meals.food_analysis_id`（可 null，null on delete）、`meal_item
 | T1 設計 demo | 完成（2026-11-21） |
 | T2 food-analyzer 核心 | 完成（2026-11-21） |
 | T3 Gemini driver 與模型實測 | 完成（2026-11-21） |
-| T4 meal 模組後端 | 未開始 |
+| T4 meal 模組後端 | 完成（2026-11-21） |
 | T5 前端實作 | 未開始 |
 | T6 測試 | 未開始 |
 | T7 部署 v1.4.0 與驗收 | 未開始 |

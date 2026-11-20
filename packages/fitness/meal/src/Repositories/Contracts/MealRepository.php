@@ -18,6 +18,11 @@ interface MealRepository
     public function findForUserOrFail(int $userId, int $id): Meal;
 
     /**
+     * 取得使用者由某一筆照片分析建立的餐點；還沒建立時回傳 null。
+     */
+    public function findByFoodAnalysis(int $userId, int $foodAnalysisId): ?Meal;
+
+    /**
      * 取得 [$from, $to) 之間已確認的餐點（含項目），依用餐時間由早到晚。
      *
      * @return Collection<int, Meal>

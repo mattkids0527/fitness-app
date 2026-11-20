@@ -39,11 +39,11 @@
 ### Services
 
 - `FoodAnalyzerManager`：`get(?driver)`（沒有綁定或設定不齊全丟 `DriverNotAvailableException`）、`defaultDriver()`
-- `FoodAnalysisService`：`analyze(User, FoodImage, ?hint)`（回傳成功的 `FoodAnalysis`）、`remainingToday(User)`、`dailyLimit()`
+- `FoodAnalysisService`：`analyze(User, FoodImage, ?hint)`（回傳成功的 `FoodAnalysis`）、`findSucceeded(User, id)`（自己成功的分析，確認頁帶入用）、`remainingToday(User)`、`dailyLimit()`
 
 ### Repository 介面
 
-- `Repositories\Contracts\FoodAnalysisRepository`：`countBetween()`、`create()`
+- `Repositories\Contracts\FoodAnalysisRepository`：`countBetween()`、`findSucceededForUser()`、`create()`
 
 ### Exceptions
 

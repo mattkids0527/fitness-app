@@ -15,5 +15,10 @@ return [
     'carbs_g' => '碳水',
     'fat_g' => '脂肪',
     'fiber_g' => '纖維',
+    'photo' => '照片',
+    'hint' => '補充說明',
+    'taken_at' => '拍攝時間',
+    'confidence' => '信心度',
+    'food_analysis_id' => '照片分析',
 
 ];

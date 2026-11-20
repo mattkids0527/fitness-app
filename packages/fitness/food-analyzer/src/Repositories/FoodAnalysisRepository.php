@@ -23,6 +23,16 @@ class FoodAnalysisRepository implements FoodAnalysisRepositoryContract
     }
 
     /**
+     * 以 user_id 與狀態一起查詢，確保只能取得自己成功的分析。
+     */
+    public function findSucceededForUser(int $userId, int $id): ?FoodAnalysis
+    {
+        return FoodAnalysis::where('user_id', $userId)
+            ->where('status', FoodAnalysis::STATUS_SUCCEEDED)
+            ->find($id);
+    }
+
+    /**
      * 寫入一筆分析紀錄。
      */
     public function create(int $userId, array $attributes): FoodAnalysis

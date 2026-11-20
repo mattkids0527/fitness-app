@@ -57,6 +57,14 @@ class FoodAnalysisService
     }
 
     /**
+     * 取得使用者自己的一筆成功的分析（確認頁帶入用）；不是自己的或失敗的回傳 null。
+     */
+    public function findSucceeded(User $user, int $id): ?FoodAnalysis
+    {
+        return $this->analyses->findSucceededForUser($user->id, $id);
+    }
+
+    /**
      * 分析一張照片並寫入紀錄，回傳成功的分析紀錄（項目在 items()，LLM 呼叫細節在 llmLog）。
      * 超過上限或 driver 不可用時不呼叫 driver、不寫紀錄；driver 失敗時寫一筆失敗紀錄後丟出對應的例外。
      *

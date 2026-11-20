@@ -5,6 +5,9 @@ namespace Fitness\Meal\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Fitness\FoodAnalyzer\Drivers\FoodItem;
+use Fitness\FoodAnalyzer\Models\FoodAnalysis;
+use Fitness\FoodAnalyzer\Services\FoodAnalysisService;
 use Fitness\Meal\Enums\MealType;
 use Fitness\Meal\Http\Requests\MealRequest;
 use Fitness\Meal\Models\Meal;
@@ -55,11 +58,17 @@ class MealController extends Controller
     }
 
     /**
-     * 新增餐點頁：?date=、?type= 預設日期與餐別；?copy_from={id} 以自己的某一餐預填（日期為今天、餐別沿用）。
+     * 新增餐點頁：?date=、?type= 預設日期與餐別；?copy_from={id} 以自己的某一餐預填（日期為今天、餐別沿用）；
+     * ?analysis={id} 為照片分析的確認頁（見 confirmAnalysis()）。
      */
-    public function create(Request $request, SavedFoodService $savedFoods): Response
+    public function create(Request $request, SavedFoodService $savedFoods, FoodAnalysisService $analyzer): Response
     {
         $user = $request->user();
+
+        if ($request->filled('analysis')) {
+            return $this->confirmAnalysis($request, $savedFoods, $analyzer);
+        }
+
         $timezone = UserCalendar::timezone($user);
         $today = UserCalendar::today($user);
         $now = CarbonImmutable::now($timezone)->format('H:i');
@@ -78,10 +87,78 @@ class MealController extends Controller
                 'meal_type' => $type->value,
                 'type_chosen' => $copyFrom !== null || $requestedType !== null,
                 'note' => '',
-                'items' => $copyFrom ? $this->presenter->detail($copyFrom, $timezone)['items'] : [],
+                'items' => $copyFrom ? $copyFrom->items->map(fn ($item) => $this->presenter->food($item))->all() : [],
                 'copied_from' => $copyFrom ? $this->presenter->summary($copyFrom, $timezone) : null,
+                'food_analysis_id' => null,
             ],
+            'analysis' => null,
         ]);
+    }
+
+    /**
+     * 照片分析的確認頁：由伺服器讀回自己成功、還沒建立餐點的分析帶入項目（含信心度），重新整理也不會遺失。
+     * ?taken_at=Y-m-d H:i（上傳照片的拍攝時間，使用者時區）有效且不是未來時用它當用餐時間，否則用現在；餐別依時間推測。
+     */
+    protected function confirmAnalysis(Request $request, SavedFoodService $savedFoods, FoodAnalysisService $analyzer): Response
+    {
+        $user = $request->user();
+        $analysis = $this->meals->analysisForConfirm($user, (int) $request->query('analysis'));
+        $takenAt = $this->resolveTakenAt($request->query('taken_at'), UserCalendar::timezone($user));
+        $eatenAt = $takenAt ?? CarbonImmutable::now(UserCalendar::timezone($user));
+        $time = $eatenAt->format('H:i');
+
+        return Inertia::render('meal/Form', [
+            ...$this->formOptions($user, $savedFoods),
+            'meal' => null,
+            'defaults' => [
+                'date' => $eatenAt->toDateString(),
+                'time' => $time,
+                'meal_type' => MealType::forTime($time)->value,
+                'type_chosen' => false,
+                'note' => '',
+                'items' => array_map(fn (FoodItem $item) => $item->toArray(), $analysis->items()),
+                'copied_from' => null,
+                'food_analysis_id' => $analysis->id,
+            ],
+            'analysis' => $this->analysisProps($analysis, $takenAt !== null, $analyzer, $user),
+        ]);
+    }
+
+    /**
+     * 確認頁的分析摘要：辨識出幾個項目、補充說明、用餐時間是否取自拍攝時間，以及今天剩餘次數。
+     *
+     * @return array<string, mixed>
+     */
+    protected function analysisProps(FoodAnalysis $analysis, bool $fromPhotoTime, FoodAnalysisService $analyzer, User $user): array
+    {
+        return [
+            'id' => $analysis->id,
+            'item_count' => count($analysis->result ?? []),
+            'hint' => $analysis->hint,
+            'time_source' => $fromPhotoTime ? 'photo' : 'now',
+            'quota' => [
+                'remaining' => $analyzer->remainingToday($user),
+                'limit' => $analyzer->dailyLimit(),
+            ],
+        ];
+    }
+
+    /**
+     * 解析拍攝時間 Y-m-d H:i（使用者時區）；格式不對或晚於現在時回傳 null。
+     */
+    protected function resolveTakenAt(mixed $value, string $timezone): ?CarbonImmutable
+    {
+        if (! is_string($value) || ! preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $value)) {
+            return null;
+        }
+
+        $takenAt = CarbonImmutable::createFromFormat('!Y-m-d H:i', $value, $timezone);
+
+        if (! $takenAt || $takenAt->format('Y-m-d H:i') !== $value || $takenAt->greaterThan(CarbonImmutable::now($timezone))) {
+            return null;
+        }
+
+        return $takenAt;
     }
 
     /**
@@ -106,6 +183,7 @@ class MealController extends Controller
             ...$this->formOptions($user, $savedFoods, $model->id),
             'meal' => $this->presenter->detail($model, UserCalendar::timezone($user)),
             'defaults' => null,
+            'analysis' => null,
         ]);
     }
 
