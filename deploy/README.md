@@ -468,6 +468,7 @@ ssh -t -i ~/.ssh/fitness_deploy deploy@<VM 外部 IP> "cd /var/www/fitness-app/c
 到 **Settings → Branches → Add branch ruleset**（或 Add classic branch protection rule），對象設 `main`：
 
 - 勾選 **Require a pull request before merging**。
+  - 底下的 **Require approvals**（Ruleset 是 **Required approvals**）要**取消勾選或設為 0**。GitHub 預設要求 1 位核准，但 PR 作者不能核准自己的 PR，一個人開發時會出現「Review required」而永遠無法合併。
 - 勾選 **Require status checks to pass**，加入 `quality`（lint）和 `ci`（tests）。這兩個名稱要等 workflow 在 GitHub 上跑過一次後，才搜尋得到。
 
 ### 部署
