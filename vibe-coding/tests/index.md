@@ -5,3 +5,4 @@
 - 2026-11-19-profile/profile 模組（BMR／每日目標、首次設定、個人資料、體重紀錄）/2026-11-19 182742 — [情境](2026-11-19-profile.md)
 - 2026-11-19-daily-summary/daily-summary 模組（今日頁、收集型事件）/2026-11-19 182742 — [情境](2026-11-19-daily-summary.md)
 - 2026-11-19-account/帳號（指令建立帳號、關閉註冊、首頁導向）/2026-11-19 182742 — [情境](2026-11-19-account.md)
+- 2026-11-20-social-login/social-login 與 social-login-google 模組（Google 登入、綁定、解除綁定）/2026-11-20 111646 — [情境](2026-11-20-social-login.md)

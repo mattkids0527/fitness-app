@@ -3,7 +3,7 @@
 - 更新日期：2026-11-20
 - 對應任務：[M2 Google 登入](../milestones/M2-google-login.md)
 - 分支：`milestone/M2-google-login`
-- 目前進度：T1～T4 完成（T4 的真實 Google 點擊驗收待使用者建立憑證）；下一步 T5 測試，先列情境給使用者確認。
+- 目前進度：T1～T5 全部完成（T4 的真實 Google 點擊驗收待使用者建立憑證）；下一步 push 分支並開 PR 合回 `main`。
 
 ## 下次接手從這裡開始
 
@@ -56,3 +56,13 @@
 - `components/AppToast.vue`：監看 `page.props.flash`，有 `success` 就顯示 Toast（每次回應都是新的 flash 物件，同樣文字連續出現也會顯示）。登入頁（AuthLayout）沒有 AppToast，成功登入不需要提示。
 - 驗證：以假憑證起 server，Playwright 攔截 accounts.google.com 後模擬 `?error=access_denied` 回來——登入頁與已連結帳號頁都顯示對應錯誤提示框、重新整理後消失；解除連結後顯示「已解除連結 Google」Toast；未設定憑證時登入頁沒有分隔線與 Google 按鈕。390px 淺色、1280px 深色檢查過。build、lint、format:check、Pint、67 tests 通過。
 - **尚未做**：實際用 Google 帳號走完「帳密登入 → 連結 Google → 登出 → Google 登入 → 解除連結 → Google 登入被拒」，需使用者先依 `social-login-google` README 建立憑證並修正 `APP_URL`（見上方「下次接手」第 3 點）。
+
+## T5 測試
+
+- 情境：`vibe-coding/tests/2026-11-20-social-login.md`（sl-01～19、slg-01～05，使用者已確認），已加入 `vibe-coding/tests/index.md`。
+- 核心模組：`packages/fitness/social-login/tests/`
+  - `Fakes/FakeSocialProvider`：假 driver，`nextUser` 為 null 時視為取消授權；`Concerns/FakesSocialProviders` 提供 `fakeProvider()`、`loginVia()`、`linkVia()`、`linkAccount()`。
+  - `Unit/SocialProviderManagerTest`、`Feature/SocialAuthRedirectTest`、`LinkSocialAccountTest`、`SocialLoginTest`、`ConnectedAccountsTest`。
+  - 唯一鍵競態（sl-10）以 Repository 子類別在「檢查通過後」插入搶先的一筆；已確認拿掉 `DB::transaction` savepoint 時此測試會因 PostgreSQL「current transaction is aborted」失敗。
+- Google driver：`packages/fitness/social-login-google/tests/Feature/GoogleDriverTest`，以 Guzzle `MockHandler` 模擬 token／userinfo，不連外。為此 driver 新增設定 `guzzle`（預設逾時 10 秒，env `GOOGLE_HTTP_TIMEOUT`），測試以 `handler` 注入。
+- 結果：全部 91 tests（647 assertions）通過、無 skip；Pint、Prettier、ESLint、`npm run build` 通過。

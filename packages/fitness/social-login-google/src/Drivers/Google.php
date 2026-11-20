@@ -75,6 +75,7 @@ class Google extends SocialProvider
             'client_secret' => config('fitness.social_login_google.client_secret'),
             'redirect' => config('fitness.social_login_google.redirect')
                 ?: route('fitness.social_login.callback', ['provider' => 'google']),
+            'guzzle' => config('fitness.social_login_google.guzzle', []),
         ]);
 
         return $provider->setScopes(config('fitness.social_login_google.scopes'));

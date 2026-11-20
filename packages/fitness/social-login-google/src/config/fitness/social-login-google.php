@@ -20,4 +20,11 @@ return [
     */
     'scopes' => ['openid', 'email', 'profile'],
 
+    /*
+    | 呼叫 Google token／userinfo API 的 Guzzle 選項；設逾時避免 Google 沒回應時 callback 卡住。
+    */
+    'guzzle' => [
+        'timeout' => env('GOOGLE_HTTP_TIMEOUT', 10),
+    ],
+
 ];

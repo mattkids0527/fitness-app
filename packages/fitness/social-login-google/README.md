@@ -13,6 +13,7 @@
 | `client_secret` | `GOOGLE_CLIENT_SECRET` | OAuth 用戶端密鑰 |
 | `redirect` | `GOOGLE_REDIRECT_URI` | 授權後回到的網址，需與 Google Cloud Console 設定完全一致；`.env.example` 預設 `${APP_URL}/auth/google/callback`，留空時改用目前網域的 callback 路由 |
 | `scopes` | — | `openid email profile`，只做登入，不呼叫其他 Google API |
+| `guzzle` | `GOOGLE_HTTP_TIMEOUT` | 呼叫 Google token／userinfo 的 Guzzle 選項，預設逾時 10 秒 |
 
 ## 行為
 
