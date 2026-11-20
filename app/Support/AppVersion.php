@@ -17,9 +17,10 @@ class AppVersion
     public function __construct(private readonly string $path) {}
 
     /**
-     * 回傳目前版本；檔案不存在、內容不是 JSON 或版號格式錯誤時回傳 null，不讓設定頁因此出錯。
+     * 回傳目前版本與更新日期；檔案不存在、內容不是 JSON 或版號格式錯誤時回傳 null，不讓設定頁因此出錯。
+     * 檔案內的 commit 只留給在 VM 上除錯用，不提供給畫面。
      *
-     * @return array{version: string, commit: ?string, deployed_at: ?string}|null
+     * @return array{version: string, updated_at: ?string}|null
      */
     public function current(): ?array
     {
@@ -34,30 +35,21 @@ class AppVersion
 
         return [
             'version' => $data['version'],
-            'commit' => $this->shortCommit($data['commit'] ?? null),
-            'deployed_at' => $this->localTime($data['deployed_at'] ?? null),
+            'updated_at' => $this->localDate($data['deployed_at'] ?? null),
         ];
     }
 
     /**
-     * 把完整 commit sha 縮成 7 碼；不是 sha 格式時回傳 null。
+     * 把部署時間轉成應用程式時區的日期（年-月-日）；無法解析時回傳 null。
      */
-    private function shortCommit(mixed $commit): ?string
-    {
-        return is_string($commit) && preg_match('/^[0-9a-f]{7,40}$/i', $commit) ? strtolower(substr($commit, 0, 7)) : null;
-    }
-
-    /**
-     * 把部署時間轉成應用程式時區的「年-月-日 時:分」；無法解析時回傳 null。
-     */
-    private function localTime(mixed $time): ?string
+    private function localDate(mixed $time): ?string
     {
         if (! is_string($time) || $time === '') {
             return null;
         }
 
         try {
-            return CarbonImmutable::parse($time)->setTimezone(config('app.timezone'))->format('Y-m-d H:i');
+            return CarbonImmutable::parse($time)->setTimezone(config('app.timezone'))->format('Y-m-d');
         } catch (Throwable) {
             return null;
         }

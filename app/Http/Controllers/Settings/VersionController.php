@@ -10,7 +10,7 @@ use Inertia\Response;
 class VersionController extends Controller
 {
     /**
-     * 顯示設定頁的「版本」分頁：目前部署的版號、部署時間與 commit。
+     * 顯示設定頁的「版本」分頁：目前部署的版號與更新日期。
      */
     public function show(AppVersion $version): Response
     {

@@ -12,7 +12,7 @@
 ## 2. 已決（2026-11-21）
 
 - 部署時自動打 tag：Run workflow 時填版號，workflow 驗證後部署，成功才打 tag、建 GitHub Release。
-- 設定頁「版本」只顯示目前版本（版號、部署時間、commit），不列更新歷史；各版內容看 GitHub Release（自動產生的 release notes）。
+- 設定頁「版本」只顯示目前版本（版號、更新日期），不列更新歷史；（原本也顯示 commit 與部署時分，v1.3.2 驗收後使用者決定拿掉，2026-11-21）各版內容看 GitHub Release（自動產生的 release notes）。
 - 版號規則（SemVer `vMAJOR.MINOR.PATCH`）：
   - M 系列新功能升中版號：M4 → `v1.4.0`。
   - 修 bug、介面調整（U 系列）、部署流程（D 系列）升最後一碼：例如 `v1.3.1`。
@@ -44,8 +44,9 @@
 | 欄位 | 有 `version.json` | 沒有（本地開發、手動部署未給版號） |
 |---|---|---|
 | 版本 | `v1.3.0` | 未標示版本 |
-| 部署時間 | `2026-11-21 14:30`（Asia/Taipei） | — |
-| Commit | 短 sha（7 碼） | — |
+| 更新日期 | `2026-11-21`（部署時間換成 Asia/Taipei 的日期） | — |
+
+`version.json` 仍保留 commit，只給在 VM 上除錯用，不傳給畫面。
 
 ## 5. 「我的」頁入口
 

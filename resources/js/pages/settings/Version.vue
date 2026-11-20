@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { CalendarClock, GitCommitHorizontal, Tag } from 'lucide-vue-next';
+import { CalendarDays, Tag } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 import HeadingSmall from '@/components/HeadingSmall.vue';
@@ -11,8 +11,7 @@ import SettingsLayout from '@/layouts/settings/Layout.vue';
 
 interface AppVersion {
     version: string;
-    commit: string | null;
-    deployed_at: string | null;
+    updated_at: string | null;
 }
 
 const props = defineProps<{
@@ -26,11 +25,10 @@ const breadcrumbItems: BreadcrumbItem[] = [
     },
 ];
 
-// 沒有版本資訊（本地開發或未給版號的部署）時，版本顯示「未標示版本」，其他欄位顯示「—」
+// 沒有版本資訊（本地開發或未給版號的部署）時，版本顯示「未標示版本」，更新日期顯示「—」
 const rows = computed(() => [
-    { label: '版本', value: props.version?.version ?? '未標示版本', icon: Tag, mono: false },
-    { label: '部署時間', value: props.version?.deployed_at ?? '—', icon: CalendarClock, mono: false },
-    { label: 'Commit', value: props.version?.commit ?? '—', icon: GitCommitHorizontal, mono: true },
+    { label: '版本', value: props.version?.version ?? '未標示版本', icon: Tag },
+    { label: '更新日期', value: props.version?.updated_at ?? '—', icon: CalendarDays },
 ]);
 </script>
 
@@ -46,7 +44,7 @@ const rows = computed(() => [
                     <div v-for="row in rows" :key="row.label" class="flex items-center gap-3 px-4 py-3.5">
                         <component :is="row.icon" class="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                         <dt class="text-sm text-muted-foreground">{{ row.label }}</dt>
-                        <dd :class="['ml-auto text-sm font-medium', { 'font-mono': row.mono }]">{{ row.value }}</dd>
+                        <dd class="ml-auto text-sm font-medium">{{ row.value }}</dd>
                     </div>
                 </dl>
             </div>
