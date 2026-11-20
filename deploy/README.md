@@ -216,8 +216,10 @@ sudo -u deploy nano /var/www/fitness-app/shared/.env
 ### 查看備份
 
 ```bash
-ls -lh /var/backups/fitness-app/
+sudo ls -lh /var/backups/fitness-app/
 ```
+
+> 備份目錄只開放給 `postgres` 和 `deploy` 讀取，所以用自己的帳號查看時要加 `sudo`。
 
 查看每天備份的執行結果：
 
@@ -250,6 +252,12 @@ sudo -u postgres createdb --owner=fitness_app fitness_app_restore_test
 sudo -u postgres pg_restore --no-owner --role=fitness_app --dbname=fitness_app_restore_test /var/backups/fitness-app/<檔名>.dump
 sudo -u postgres psql -d fitness_app_restore_test -c '\dt'
 sudo -u postgres dropdb fitness_app_restore_test
+```
+
+只想確認最新一份備份能不能還原的話，可以用這一行。整段都以 `postgres` 身分執行，檔名才讀得到：
+
+```bash
+sudo -u postgres bash -c 'f=$(ls -1t /var/backups/fitness-app/*.dump | head -1); dropdb --if-exists fitness_app_restore_test; createdb --owner=fitness_app fitness_app_restore_test && pg_restore --no-owner --role=fitness_app --dbname=fitness_app_restore_test "$f" && echo "restore OK: $f"; dropdb fitness_app_restore_test'
 ```
 
 ### 還原正式資料庫
