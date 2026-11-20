@@ -16,53 +16,65 @@
 | CI | PR 到 `main` 時跑 lint 與測試（沿用現有的 `lint.yml`、`tests.yml`，並修正 lint 擋不住錯誤的問題） |
 | CD 觸發 | 合併 `main` **不自動部署**，在 GitHub Actions 頁面手動按按鈕（`workflow_dispatch`）才部署，而且只能部署 `main` |
 | 部署工具 | Deployer 7（`deployer/deployer`，放 composer require-dev），使用內建的 `recipe/laravel.php` |
-| 網域 | 目前沒有網域，部署分兩階段進行（見 §3） |
+| 網域 | `wn52777.com`（Cloudflare Registrar），經由 Cloudflare Tunnel 連到 VM，一開始就用網域 + HTTPS 上線（見 §3） |
 
-## 3. 兩階段上線
+## 3. 網域與 Cloudflare Tunnel（已決，2026-11-20）
 
-沒有網域也能先部署。少的只有 HTTPS 才能用的功能，買好網域後再補上。
+原本規劃先用 IP 上線（階段 A），買網域後再補 HTTPS（階段 B）。使用者已經註冊好 `wn52777.com`，所以**直接用網域上線，不經過 IP 階段**。Google 登入與 PWA 從第一次部署就能使用。
 
-| 階段 | 網址 | 可用功能 | 不能用的功能 |
-|---|---|---|---|
-| A：先用 IP 上線 | `http://<靜態 IP>` | 帳密登入、首次設定、體重、今日頁，以及之後的業務功能 | Google 登入（Google 不接受 IP 當 redirect URI，沒設憑證時按鈕會自動隱藏）、PWA 安裝／離線（service worker 需要 HTTPS，`app.ts` 已檢查支援才註冊，不會報錯） |
-| B：網域 + HTTPS | `https://<網域>` | 全部功能 | — |
+### 3.1 為什麼是「Cloudflare 在 VM 前面」，不是 Workers/Pages
 
-### 3.1 階段 B：VM 前面放 Cloudflare（已決，2026-11-20）
-
-**架構維持 GCP VM + Laravel，不改用 Cloudflare Workers/Pages。** 原因：
 - Workers 只能執行 JavaScript／WebAssembly，不能跑 PHP。
 - Pages 只能放靜態網站，但 Inertia 的每個頁面都需要 Laravel 在伺服器端處理。
 - 改用 Workers 等於後端全部改寫成 TypeScript，資料庫也要換，M1、M2 都要重做。
 
-Cloudflare 改成放在 VM 前面，使用免費方案：
+所以架構維持 GCP VM + Laravel，Cloudflare（免費方案）放在前面，負責網域、HTTPS、靜態檔快取和防護。
 
-| 用途 | 做法 |
+### 3.2 連線方式：Cloudflare Tunnel
+
+```
+使用者 ──HTTPS──▶ Cloudflare 邊緣節點（憑證、快取、DDoS 防護）
+                        │  Tunnel（由 VM 主動連出去）
+                        ▼
+VM：cloudflared ──HTTP──▶ nginx（只聽 127.0.0.1:80）──▶ PHP-FPM
+```
+
+- VM 上的 `cloudflared` 主動連線到 Cloudflare，所以 **80／443 完全不對外開放**。ufw 只開 22，GCP 防火牆也拿掉 HTTP／HTTPS 規則。
+- HTTPS 由 Cloudflare 處理，VM 上不用安裝或更新憑證。
+- `cloudflared` 常駐大約佔 30～50MB 記憶體，有 2GB swap 可以承受。
+- 部署用的 SSH（22 port）照舊直連 VM 的靜態 IP，和 Tunnel 無關。
+- 另一個做法是 DNS Proxy（橘色雲朵）：VM 要裝 Origin 憑證、開 443，並維護 Cloudflare 的 IP 範圍清單。這個做法不採用。
+
+### 3.3 讓 Laravel 知道「使用者是用 HTTPS 連進來的」
+
+只有 Tunnel 連得到 nginx（只聽 localhost），而 Cloudflare 對外一律是 HTTPS。所以直接在 nginx 這一層處理，**不改 Laravel 程式**：
+
+| 問題 | 做法 |
 |---|---|
-| 網域 | 在 Cloudflare Registrar 用成本價購買，DNS 也由 Cloudflare 管理 |
-| HTTPS | 由 Cloudflare 處理憑證，詳細設定見下方「連線方式」 |
-| 節省 GCP 流量 | `/build/` 由 Cloudflare 邊緣節點快取（檔名有 hash，可以長期快取），大部分靜態檔的流量不經過 GCP 的 1GB 免費額度 |
-| 防護 | 隱藏 VM 的 IP，並有 DDoS 防護 |
+| Laravel 收到的是 HTTP，會產生 `http://` 網址，Google OAuth 的 redirect URI 也會對不上 | nginx 傳給 PHP-FPM 時固定加上 `HTTPS=on`，Laravel 就會認為是 HTTPS 連線 |
+| 所有請求的來源 IP 都是 `127.0.0.1`，登入失敗次數的限制會變成全部使用者一起被鎖 | nginx 的 `real_ip` 模組：只信任來自 `127.0.0.1` 的 `CF-Connecting-IP` 標頭，換成使用者的真實 IP 再傳給 PHP |
+| 有人用 `http://` 連進來 | Cloudflare 開啟「Always Use HTTPS」；nginx 也會檢查，看到 `X-Forwarded-Proto: http` 時轉向 `https://` |
 
-**連線方式**：兩種做法，到時候再選一種。
+> 原本規劃的「`trustProxies` 信任 `127.0.0.1` 再加上 nginx `real_ip`」兩者會互相衝突：`real_ip` 把來源 IP 換成使用者的 IP 後，Laravel 就不會信任那個請求帶的 proxy 標頭。改成上表的做法，兩個問題都在 nginx 解決。
 
-| 做法 | 內容 | 優點 | 缺點 |
-|---|---|---|---|
-| (a) DNS Proxy | DNS 開啟橘色雲朵代理；VM 裝 Cloudflare Origin 憑證，nginx 改聽 443，加密模式設為 Full (strict)；GCP 防火牆的 80／443 只允許 Cloudflare 的 IP 範圍 | 設定單純，VM 不用多跑程式 | 要維護 Cloudflare 的 IP 範圍清單 |
-| (b) Cloudflare Tunnel | VM 執行 `cloudflared` 主動連線到 Cloudflare，nginx 只聽 localhost；80／443 完全不對外開放 | 對外開的 port 最少，不需要另外處理憑證 | `cloudflared` 常駐約佔 30～50MB 記憶體 |
+### 3.4 Cloudflare 後台設定
 
-不論選哪一種，部署用的 SSH（22 port）都照舊直連 VM 的靜態 IP。
+| 項目 | 設定 |
+|---|---|
+| Tunnel | Zero Trust → Networks → Tunnels 建立 `fitness-app`，Public Hostname 把 `wn52777.com` 指到 `http://localhost:80`；`www.wn52777.com` 也指過來，由 nginx 轉向不含 www 的網址 |
+| SSL/TLS | 加密模式設為 Full；開啟 Always Use HTTPS |
+| 快取 | 採用預設行為，Cloudflare 會依照 nginx 給的 `Cache-Control` 決定：`/build/*` 長期快取，`sw.js`、`manifest.webmanifest` 不快取，頁面（HTML）預設不快取 |
+| 其他 | 關閉 Rocket Loader，它會改寫 `<script>` 的載入方式，可能讓 Vue 無法啟動 |
 
-**階段 B 要做的事**
-1. 買網域，DNS 指向 VM（或建立 Tunnel）。
-2. 依選擇的連線方式設定 nginx。
-3. **讓 Laravel 知道前面有 proxy**：
-   - `bootstrap/app.php` 設定 `trustProxies`。做法 (a) 信任 Cloudflare 的 IP 範圍，做法 (b) 信任 `127.0.0.1`。少了這步，Laravel 會以為連線是 HTTP，產生的網址和 Google OAuth 的 redirect URI 會不一致。
-   - nginx 用 `real_ip_header CF-Connecting-IP` 取得使用者的真實 IP。少了這步，所有請求看起來都來自 Cloudflare，登入失敗次數的限制會變成全部使用者一起被鎖。
-4. 設定 Cloudflare 快取規則：`/build/*` 長期快取；`sw.js`、`manifest.webmanifest` 和所有頁面都不快取。
-5. 改 `.env`：`APP_URL=https://<網域>`、`SESSION_SECURE_COOKIE=true`。
-6. 在 Google Cloud 建立正式環境的 OAuth 憑證，填入 `.env`。
+### 3.5 正式環境的 Google 登入
 
-**M4 照片儲存**：Cloudflare R2 是候選方案，有 10GB 免費空間，下載不收流量費（總覽規格 §2 原本就列為候選），到 M4 時再決定。
+- 在 Google Cloud 建立正式環境專用的 OAuth 用戶端（和本地開發分開），redirect URI 為 `https://wn52777.com/auth/google/callback`。
+- 憑證只填在 VM 的 `shared/.env`。
+- OAuth 同意畫面維持「測試中」狀態，把自己的 Google 帳號加為測試使用者即可。這個專案只用到 `openid email profile`，之後要開放給其他人使用時，再改成「已發布」。
+
+### 3.6 M4 照片儲存
+
+Cloudflare R2 是候選方案，有 10GB 免費空間，下載不收流量費（總覽規格 §2 原本就列為候選），到 M4 時再決定。
 
 ## 4. 部署架構
 
@@ -109,7 +121,7 @@ Deployer 每次部署的步驟：
 
 - 建立 `deploy` 帳號，只允許 SSH 金鑰登入，關閉密碼登入與 root 登入。
 - `deploy` 帳號的 sudo 只開放 `systemctl reload php8.4-fpm` 這一條指令（寫在 sudoers）。
-- 防火牆（GCP 防火牆規則 + ufw）只開 22、80、443。GitHub Actions 的 IP 不固定，22 port 只能對外開放，搭配只用金鑰登入與 fail2ban 防護。
+- 防火牆（GCP 防火牆規則 + ufw）只開 22。網站流量全部經由 Cloudflare Tunnel 進來，80／443 不對外開放。GitHub Actions 的 IP 不固定，22 port 只能對外開放，搭配只用金鑰登入與 fail2ban 防護。
 - 開啟 `unattended-upgrades`，自動安裝安全性更新。
 - 正式環境 `.env`：`APP_ENV=production`、`APP_DEBUG=false`、新產生的 `APP_KEY`、資料庫使用專用帳號與強密碼。
 - 正式環境的帳號用 SSH 連進 VM 後執行 `php artisan user:create` 建立；`db:seed` 只在 local 環境執行，不會在正式環境建立開發帳號。
@@ -127,7 +139,7 @@ Deployer 每次部署的步驟：
 |---|---|
 | `SSH_PRIVATE_KEY` | `deploy` 帳號的私鑰（為部署專用的新金鑰） |
 | `SSH_KNOWN_HOSTS` | VM 的 host key（`ssh-keyscan` 產生），避免中間人攻擊 |
-| `DEPLOY_HOST` | VM 的靜態 IP（階段 B 可改成網域） |
+| `DEPLOY_HOST` | VM 的靜態 IP（網域經過 Cloudflare Tunnel，不能用來 SSH） |
 
 **分支保護**：`main` 設定必須透過 PR 合併，`quality`（lint）與 `ci`（tests）兩項檢查通過才能合併。
 
@@ -135,7 +147,7 @@ Deployer 每次部署的步驟：
 
 - 區域選 `us-west1`（Oregon），免費額度只限 `us-west1`、`us-central1`、`us-east1`，這裡離台灣最近。
 - 外部 IP 改成靜態 IP，避免重開機後換 IP。GCP 對外部 IPv4 的計費規則改過幾次，設好後到帳單頁確認是否產生費用。
-- 免費額度每月只有 1GB 對外流量：nginx 對 `/build/` 設長效快取（檔名有 hash），並開啟 gzip；到階段 B 時再由 Cloudflare 的邊緣快取分擔靜態檔流量（§3.1）。
+- 免費額度每月只有 1GB 對外流量：nginx 對 `/build/` 設長效快取（檔名有 hash），並開啟 gzip；Cloudflare 的邊緣快取會再分擔大部分靜態檔流量（§3.4）。經過 Tunnel 的流量仍然算在 GCP 的對外流量裡。
 
 ## 9. 已決（2026-11-20 討論結果）
 
@@ -146,11 +158,10 @@ Deployer 每次部署的步驟：
    - `deploy/README.md` 寫還原步驟（`pg_restore`）。
    - 異地備份等有正式資料後再決定。
 3. **Migration 原則**：接受。migration 一律寫成新舊版程式都能使用，例如新增欄位先設成可以是空值、刪欄位分兩次部署（先讓程式不再使用，下一次部署才刪）。`dep rollback` 時只切換程式碼，不需要動資料庫。此原則補進 `vibe-coding/coding-style.md`。
-4. **網域**：之後再買，在 Cloudflare Registrar 購買並由 Cloudflare 管理 DNS（見 §3.1）。本 milestone 只做階段 A（用 IP、HTTP 上線），階段 B 等買好網域後另開 Task。
+4. **網域**：已在 Cloudflare Registrar 購買 `wn52777.com`，以 Cloudflare Tunnel 連到 VM，直接用網域上線；正式環境的 Google 登入也在本 milestone 完成（見 §3）。
 
 ## 10. 不包含
 
-- 階段 B 的實際設定（等有網域後另開 Task 或 milestone，本規格先把步驟寫好）
 - 檔案改存 S3／R2（總覽規格 §2 提到，等 M4 照片功能時再決定）
 - 監控、告警、log 收集
 - staging 環境
