@@ -66,7 +66,8 @@ class MealController extends Controller
 
         $copyFrom = $request->filled('copy_from') ? $this->meals->find($user, (int) $request->query('copy_from')) : null;
         $date = $copyFrom ? $today : $this->resolveDate($request->query('date'), $today, $timezone);
-        $type = $copyFrom?->meal_type ?? MealType::tryFrom((string) $request->query('type')) ?? MealType::forTime($now);
+        $requestedType = MealType::tryFrom((string) $request->query('type'));
+        $type = $copyFrom?->meal_type ?? $requestedType ?? MealType::forTime($now);
 
         return Inertia::render('meal/Form', [
             ...$this->formOptions($user, $savedFoods),
@@ -75,7 +76,7 @@ class MealController extends Controller
                 'date' => $date->toDateString(),
                 'time' => $date->equalTo($today) ? $now : $type->defaultTime(),
                 'meal_type' => $type->value,
-                'type_chosen' => $copyFrom !== null || $request->filled('type'),
+                'type_chosen' => $copyFrom !== null || $requestedType !== null,
                 'note' => '',
                 'items' => $copyFrom ? $this->presenter->detail($copyFrom, $timezone)['items'] : [],
                 'copied_from' => $copyFrom ? $this->presenter->summary($copyFrom, $timezone) : null,
