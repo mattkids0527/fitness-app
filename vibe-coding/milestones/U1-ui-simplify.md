@@ -31,7 +31,8 @@
 
 ### T2 縮放鎖定
 `app.blade.php` 與 `public/offline.html` 的 viewport 加 `maximum-scale=1, user-scalable=no`；`app.css` 的 `html` 加 `touch-action: manipulation`；`app.ts` 擋 `gesturestart`；`offline.html` 是 service worker 預先快取的檔案，`sw.js` 的 `CACHE_VERSION` 改成 `v2` 讓舊快取更新；確認所有輸入框（含 textarea）在手機上是 16px 以上（目前都是 `text-base`）。
-**完成條件**：Playwright 以手機模擬確認點兩下不會改變縮放比例；build、lint、format:check 通過。
+**完成條件**：Playwright 以手機模擬確認設定生效（viewport、`touch-action`、`gesturestart` 被擋下、輸入框 16px）；build、lint、format:check 通過；部署後以實機確認。
+- 實作紀錄：headless Chromium 不會模擬點兩下與兩指縮放（沒有鎖定的對照頁也測不出縮放），所以改成檢查設定本身：`/login` 與 `/offline.html` 的 viewport 正確、`html` 的 `touch-action` 為 `manipulation`、`gesturestart` 事件被 `preventDefault`、輸入框 16px。實際手勢要在正式站用手機確認。另外 demo 的 `icons.js` 宣告未使用的全域變數會讓 `eslint .` 失敗（`aec1a59` 的 CI 會因此不過），改成掛在 `window` 上。
 
 ### T3 營養素圖示與表單標籤
 新增共用的營養素定義（圖示、顏色、名稱），套用到 `NutrientGrid`、`MealItemCard`、常用食物面板與列表、`FoodPicker` 清單、`TodayTargetsCard` 蛋白質列（含 −N g 與達成 ✓）；表單拿掉「（選填）」、名稱與熱量打 `*`，「備註」同規則。（u1-02、u1-03、u1-10，u1-04 的蛋白質列）
@@ -49,6 +50,6 @@
 | Task | 狀態 |
 |---|---|
 | T1 設計 demo | 完成（2026-11-20） |
-| T2 縮放鎖定 | 未開始 |
+| T2 縮放鎖定 | 完成（2026-11-20） |
 | T3 營養素圖示與表單標籤 | 未開始 |
 | T4 今日頁卡片、＋選單、餐點卡、常用食物說明 | 未開始 |

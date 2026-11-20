@@ -3,6 +3,9 @@
    每個主題左右對照「原本」與「改後」；範例資料沿用 M3 demo 的使用者。
    ========================================================================== */
 
+// 圖示由 icons.js 掛在 window 上
+const { ICONS } = window;
+
 const DATA = {
     calorieTarget: 1678,
     consumedKcal: 820,
