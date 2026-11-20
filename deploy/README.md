@@ -443,7 +443,7 @@ ssh -t -i ~/.ssh/fitness_deploy deploy@<VM 外部 IP> "cd /var/www/fitness-app/c
 
 ### 版號規則
 
-格式 `vMAJOR.MINOR.PATCH`，第一個版本是 `v1.3.0`（M1～M3、U1、D2）。
+格式 `vMAJOR.MINOR.PATCH`，第一個版本是 `v1.3.1`（M1～M3、U1、D2；規格原訂 `v1.3.0`，實際沒有用到）。
 
 | 這次上線的內容 | 怎麼升 | 例子 |
 |---|---|---|
