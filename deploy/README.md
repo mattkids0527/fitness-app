@@ -371,6 +371,24 @@ DEPLOY_HOST=<VM 外部 IP> vendor/bin/dep ssh
 DEPLOY_HOST=<VM 外部 IP> vendor/bin/dep deploy:unlock
 ```
 
+### 修改正式環境的 `.env`
+
+正式環境的設定只放在 VM 的 `/var/www/fitness-app/shared/.env`，不在 git 裡。修改後一定要做下面這一步，因為部署時已經執行 `config:cache`，PHP 也會用 OPcache 快取程式，不重建快取的話網站會繼續讀舊的設定。
+
+在瀏覽器版 SSH 執行：
+
+```bash
+sudo -u deploy nano /var/www/fitness-app/shared/.env
+```
+
+```bash
+cd /var/www/fitness-app/current && sudo -u deploy php artisan config:cache && sudo systemctl reload php8.4-fpm
+```
+
+也可以改用重新部署（`dep deploy`），效果一樣。
+
+**正式環境的 Google 登入**：在 Google Cloud 建立正式環境專用的 OAuth 用戶端（網頁應用程式），已授權的重新導向 URI 填 `https://wn52777.com/auth/google/callback`。把用戶端 ID 和密鑰填入 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET` 後重建快取，登入頁就會出現 Google 按鈕。詳細步驟見 [social-login-google 模組說明](../packages/fitness/social-login-google/README.md)。
+
 ### 建立正式環境帳號
 
 第一版不開放註冊，帳號用指令建立。第一次部署完成後執行：
