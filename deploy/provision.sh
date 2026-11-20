@@ -525,7 +525,9 @@ EOF
     rm -f /etc/nginx/sites-enabled/default
     nginx -t 2>&1 | sed 's/^/    /'
     svc enable nginx
-    svc reload nginx || svc restart nginx
+    # 一定要 restart：listen 位址改變時（例如預設站台的 0.0.0.0:80 改成 127.0.0.1:80），
+    # reload 會因為舊的 socket 還占著 port 而綁定失敗，nginx 會默默沿用舊設定，systemctl 卻回報成功
+    svc restart nginx
 }
 
 # 安裝 cloudflared，並以 Tunnel token 註冊成系統服務（token 不提供時互動詢問，可留空稍後再設定）
