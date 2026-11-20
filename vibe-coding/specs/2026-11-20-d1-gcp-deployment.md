@@ -42,7 +42,7 @@ VM：cloudflared ──HTTP──▶ nginx（只聽 127.0.0.1:80）──▶ PHP
 - VM 上的 `cloudflared` 主動連線到 Cloudflare，所以 **80／443 完全不對外開放**。ufw 只開 22，GCP 防火牆也拿掉 HTTP／HTTPS 規則。
 - HTTPS 由 Cloudflare 處理，VM 上不用安裝或更新憑證。
 - `cloudflared` 常駐大約佔 30～50MB 記憶體，有 2GB swap 可以承受。
-- 部署用的 SSH（22 port）照舊直連 VM 的靜態 IP，和 Tunnel 無關。
+- 部署用的 SSH（22 port）直連 VM 的外部 IP，和 Tunnel 無關。網站不依賴 VM 的 IP，所以**不需要靜態 IP**（見 §8）。
 - 另一個做法是 DNS Proxy（橘色雲朵）：VM 要裝 Origin 憑證、開 443，並維護 Cloudflare 的 IP 範圍清單。這個做法不採用。
 
 ### 3.3 讓 Laravel 知道「使用者是用 HTTPS 連進來的」
@@ -139,19 +139,19 @@ Deployer 每次部署的步驟：
 |---|---|
 | `SSH_PRIVATE_KEY` | `deploy` 帳號的私鑰（為部署專用的新金鑰） |
 | `SSH_KNOWN_HOSTS` | VM 的 host key（`ssh-keyscan` 產生），避免中間人攻擊 |
-| `DEPLOY_HOST` | VM 的靜態 IP（網域經過 Cloudflare Tunnel，不能用來 SSH） |
+| `DEPLOY_HOST` | VM 的外部 IP（網域經過 Cloudflare Tunnel，不能用來 SSH）；臨時 IP 換掉時要更新這個值與 `SSH_KNOWN_HOSTS` |
 
 **分支保護**：`main` 設定必須透過 PR 合併，`quality`（lint）與 `ci`（tests）兩項檢查通過才能合併。
 
 ## 8. GCP 設定
 
 - 區域選 `us-west1`（Oregon），免費額度只限 `us-west1`、`us-central1`、`us-east1`，這裡離台灣最近。
-- 外部 IP 改成靜態 IP，避免重開機後換 IP。GCP 對外部 IPv4 的計費規則改過幾次，設好後到帳單頁確認是否產生費用。
+- 外部 IP 使用臨時 IP 即可（已決，2026-11-20）。網站走 Tunnel，不受 IP 影響；臨時 IP 只在 VM 停止再啟動時才會換，換了只要更新部署用的 `DEPLOY_HOST` 與 `SSH_KNOWN_HOSTS`。外部 IPv4 不在免費額度內，約 US$0.005／小時，臨時與靜態價格相同。之後若想讓 SSH 也不依賴 IP，可以把 SSH 改走 Tunnel（另開 Task）。
 - 免費額度每月只有 1GB 對外流量：nginx 對 `/build/` 設長效快取（檔名有 hash），並開啟 gzip；Cloudflare 的邊緣快取會再分擔大部分靜態檔流量（§3.4）。經過 Tunnel 的流量仍然算在 GCP 的對外流量裡。
 
 ## 9. 已決（2026-11-20 討論結果）
 
-1. **VM 初始化**：寫成 shell 腳本 `deploy/provision.sh`，連進全新的 Ubuntu VM 後以 sudo 執行一次。腳本要能重複執行（已經做過的步驟會略過），之後重建 VM 也能直接使用。GCP 主控台的操作（建立 VM、靜態 IP、防火牆規則）腳本做不到，另外寫在 `deploy/README.md`。
+1. **VM 初始化**：寫成 shell 腳本 `deploy/provision.sh`，連進全新的 Ubuntu VM 後以 sudo 執行一次。腳本要能重複執行（已經做過的步驟會略過），之後重建 VM 也能直接使用。GCP 主控台的操作（建立 VM、防火牆規則）腳本做不到，另外寫在 `deploy/README.md`。
 2. **資料庫備份**：要做。
    - 每天 03:00（Asia/Taipei）由 cron 執行 `pg_dump -Fc`，存到 `/var/backups/fitness-app/`，保留最近 7 份。
    - 備份腳本與 cron 由 `provision.sh` 安裝。

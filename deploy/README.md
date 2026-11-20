@@ -14,7 +14,7 @@ VM：cloudflared ──HTTP──▶ nginx（只聽 127.0.0.1:80）──▶ PHP
 ```
 
 - 網站流量只經由 Cloudflare Tunnel 進來，VM 不開放 80／443。
-- 部署用的 SSH（22 port）直連 VM 的靜態 IP。
+- 部署用的 SSH（22 port）直連 VM 的外部 IP。網站不依賴 VM 的 IP，所以用臨時 IP 就可以（見 §3）。
 
 ---
 
@@ -54,15 +54,28 @@ ssh-keygen -t ed25519 -f ~/.ssh/fitness_deploy -C fitness-deploy -N ""
 
 建立後，順便到 **帳單 → 預算與快訊** 設一個 US$5 的預算快訊。外部 IP 本身每月約 US$3.65（見 §3），超過 US$5 代表有其他不在免費額度內的費用。
 
-## 3. 外部 IP 改成靜態 IP
+## 3. 外部 IP（臨時即可，靜態為選擇性）
 
-VM 預設的外部 IP 是臨時的，停機再開機後可能會變。網站流量走 Tunnel，不受 IP 影響；但 Deployer 和 GitHub Actions 要用 IP 連 SSH，所以還是要固定。
+網站走 Cloudflare Tunnel，由 VM 主動連出去，**網站不依賴 VM 的 IP**。只有部署用的 SSH 需要知道 IP，所以**用 VM 預設的臨時 IP 就可以，這一步可以跳過**。
 
-到 **VPC 網路 → IP 位址**，找到 `fitness-app` 的外部 IP，按右邊的 **⋮ → 升級為靜態 IP 位址**，名稱填 `fitness-app-ip`。
+到 VM 列表記下「外部 IP」欄位的值，後面寫 `<VM 外部 IP>` 的地方都填它。
 
-> **費用**：VM 上的外部 IPv4 不在免費額度內，約 US$0.005／小時（每月約 US$3.65）。靜態和臨時 IP 只要掛在運作中的 VM 上，價格都一樣，所以改成靜態不會多花錢。
+**臨時 IP 什麼時候會換？**
+
+- 只有 VM「停止」再「啟動」時會換。
+- 重新開機（重設）、GCP 自動維護都不會換。
+
+**如果換了**：
+
+- 網站照常運作，不受影響。
+- 本地部署：改用新的 IP 連線即可。第一次連線會提示 host key，這是正常的，因為 IP 換了，VM 的金鑰沒變。
+- GitHub Actions：更新 Secrets 的 `DEPLOY_HOST`，並重新產生 `SSH_KNOWN_HOSTS`（步驟在 T6 的說明）。
+
+**想固定 IP 的話**：到 **VPC 網路 → IP 位址**，找到 `fitness-app` 的外部 IP，按右邊的 **⋮ → 升級為靜態 IP 位址**。
+
+> **費用**：VM 上的外部 IPv4 不在免費額度內，約 US$0.005／小時（每月約 US$3.65）。臨時和靜態 IP 只要掛在運作中的 VM 上，價格都一樣。
 >
-> VM 需要外部 IP 才能連到 Cloudflare、GitHub 和套件庫，拿不掉。如果之後刪除 VM，記得到同一頁**釋放**靜態 IP；保留著不用時，費率是 US$0.01／小時，反而比較貴。設好後隔天到帳單頁確認實際金額。
+> VM 需要外部 IP 才能連到 Cloudflare、GitHub 和套件庫，拿不掉。如果改成靜態 IP，之後刪除 VM 時記得到同一頁**釋放**它；保留著不用時，費率是 US$0.01／小時，反而比較貴。
 
 ## 4. 建立 Cloudflare Tunnel 並設定網域
 
@@ -154,7 +167,7 @@ sudo cat /home/deploy/.ssh/id_ed25519.pub
 **2. 從你的電腦測試登入**
 
 ```bash
-ssh -i ~/.ssh/fitness_deploy deploy@<VM 靜態 IP>
+ssh -i ~/.ssh/fitness_deploy deploy@<VM 外部 IP>
 ```
 
 登入後確認 VM 可以連到 GitHub，看到 `Hi mattkids0527/fitness-app! You've successfully authenticated` 就代表成功：
@@ -167,7 +180,7 @@ ssh -T git@github.com
 
 - 用瀏覽器開 `https://wn52777.com`。看到 **404 Not Found** 是正常的，因為程式還沒部署，但已經代表 Cloudflare → Tunnel → nginx 整條路是通的。
 - Cloudflare Zero Trust 的 Tunnels 頁面，`fitness-app` 應該顯示 **HEALTHY**。
-- 直接開 `http://<VM 靜態 IP>` 應該**連不上**（逾時），代表 VM 沒有對外開放網站。
+- 直接開 `http://<VM 外部 IP>` 應該**連不上**（逾時），代表 VM 沒有對外開放網站。
 
 **4. 檢查服務與備份**
 
@@ -222,7 +235,7 @@ sudo -u postgres fitness-app-backup
 目前沒有異地備份，重要的時候可以手動下載一份。在你的電腦上執行：
 
 ```bash
-scp -i ~/.ssh/fitness_deploy "deploy@<VM 靜態 IP>:/var/backups/fitness-app/*.dump" ./
+scp -i ~/.ssh/fitness_deploy "deploy@<VM 外部 IP>:/var/backups/fitness-app/*.dump" ./
 ```
 
 ### 先還原到暫時的資料庫驗證

@@ -659,7 +659,7 @@ print_summary() {
 
     2. 用部署用私鑰測試登入 deploy 帳號（在你的電腦上執行）：
 
-       ssh -i ~/.ssh/fitness_deploy ${DEPLOY_USER}@<VM 靜態 IP>
+       ssh -i ~/.ssh/fitness_deploy ${DEPLOY_USER}@<VM 外部 IP>
 
     3. 確認正式環境設定：sudo -u ${DEPLOY_USER} nano ${DEPLOY_PATH}/shared/.env
 

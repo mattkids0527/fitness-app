@@ -41,7 +41,7 @@
 - nginx site 設定（root 指向 `current/public`，`/build/` 長效快取，開 gzip）
 - `/var/www/fitness-app/shared/.env` 範本
 
-可調整的值（資料庫密碼、`deploy` 的公鑰等）以參數或互動輸入提供，不寫死在 repo。新增 `deploy/README.md`，寫 GCP 主控台的操作：建立 e2-micro（`us-west1`）、靜態 IP、防火牆規則、第一次 SSH 連線、執行腳本。
+可調整的值（資料庫密碼、`deploy` 的公鑰等）以參數或互動輸入提供，不寫死在 repo。新增 `deploy/README.md`，寫 GCP 主控台的操作：建立 e2-micro（`us-west1`）、外部 IP、防火牆規則、第一次 SSH 連線、執行腳本。
 **完成條件**：shellcheck 沒有錯誤；在本地的 Ubuntu 容器試跑過，systemd 相關步驟除外；使用者在 VM 上執行成功（與 T4 一起驗證）。
 
 ### T3 資料庫備份
@@ -57,7 +57,7 @@
 - `.env` 範本改成 `APP_URL=https://wn52777.com`、`SESSION_SECURE_COOKIE=true`
 
 `deploy/README.md` 補上 Cloudflare 後台的操作（建立 Tunnel、Public Hostname、SSL/TLS、Rocket Loader），以及拿掉 GCP 防火牆的 HTTP／HTTPS 規則；原本依 IP 上線的說明一併改寫。使用者在 VM 上執行腳本，T2、T3、T4 一起驗證。
-**完成條件**：容器內試跑通過；使用者在 VM 上執行成功，T2、T3 的驗證指令都通過；瀏覽 `https://wn52777.com` 得到 nginx 回應（程式尚未部署，會是 404）；直接連 `http://<靜態 IP>` 連不上。
+**完成條件**：容器內試跑通過；使用者在 VM 上執行成功，T2、T3 的驗證指令都通過；瀏覽 `https://wn52777.com` 得到 nginx 回應（程式尚未部署，會是 404）；直接連 `http://<VM 外部 IP>` 連不上。
 
 ### T5 Deployer 設定
 `composer require --dev deployer/deployer`。新增根目錄的 `deploy.php`：使用 `recipe/laravel.php`，部署路徑 `/var/www/fitness-app`，保留 3 個版本，`.env` 和 `storage` 放 shared。加上幾個自訂 task：
