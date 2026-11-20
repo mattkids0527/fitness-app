@@ -30,14 +30,19 @@
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/",
             "Fitness\\DailySummary\\": "packages/fitness/daily-summary/src/",
-            "Fitness\\Profile\\": "packages/fitness/profile/src/"
-        }
+            "Fitness\\Profile\\": "packages/fitness/profile/src/",
+            "Fitness\\SocialLogin\\": "packages/fitness/social-login/src/"
+        },
+        "files": [
+            "packages/fitness/social-login/src/helpers.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
             "Tests\\": "tests/",
             "Fitness\\DailySummary\\Tests\\": "packages/fitness/daily-summary/tests/",
-            "Fitness\\Profile\\Tests\\": "packages/fitness/profile/tests/"
+            "Fitness\\Profile\\Tests\\": "packages/fitness/profile/tests/",
+            "Fitness\\SocialLogin\\Tests\\": "packages/fitness/social-login/tests/"
         }
     },
     "scripts": {
