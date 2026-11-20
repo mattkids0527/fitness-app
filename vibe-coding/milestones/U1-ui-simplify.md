@@ -37,6 +37,7 @@
 ### T3 營養素圖示與表單標籤
 新增共用的營養素定義（圖示、顏色、名稱），套用到 `NutrientGrid`、`MealItemCard`、常用食物面板與列表、`FoodPicker` 清單、`TodayTargetsCard` 蛋白質列（含 −N g 與達成 ✓）；表單拿掉「（選填）」、名稱與熱量打 `*`，「備註」同規則。（u1-02、u1-03、u1-10，u1-04 的蛋白質列）
 **完成條件**：390px 與桌機、淺色與深色對照 demo 檢查；build、lint、format:check 通過。
+- 實作紀錄：營養素定義在 `composables/useNutrients.ts`（`NUTRIENTS`、`MACROS`、`nutrientMeta()`）；列表用的三大營養素為 `components/meal/MacroValues.vue`；表單標籤為 `components/FieldLabel.vue`（`icon`、`required`），必填欄位的輸入框加 `aria-required`。餐點項目收合時的摘要也改成圖示。日期、時間、餐別一定有預設值，不打 `*`。
 
 ### T4 今日頁卡片、＋選單、餐點卡、常用食物說明
 `TodayTargetsCard` 的熱量目標／已攝取改圖示；`TodayMealsCard`、`TodayWaterCard` 的列與右上連結；`QuickAddDialog` 改三欄大圖示與順序、「記錄餐點」改名；`MealCard` 拿掉項目數；常用食物頁說明框改 ⓘ。只有圖示的按鈕加 `aria-label`。（u1-04～u1-09）
@@ -51,5 +52,5 @@
 |---|---|
 | T1 設計 demo | 完成（2026-11-20） |
 | T2 縮放鎖定 | 完成（2026-11-20） |
-| T3 營養素圖示與表單標籤 | 未開始 |
+| T3 營養素圖示與表單標籤 | 完成（2026-11-20） |
 | T4 今日頁卡片、＋選單、餐點卡、常用食物說明 | 未開始 |

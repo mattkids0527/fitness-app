@@ -1,11 +1,14 @@
 <script setup lang="ts">
+import FieldLabel from '@/components/FieldLabel.vue';
 import InputError from '@/components/InputError.vue';
+import MacroValues from '@/components/meal/MacroValues.vue';
 import { Input } from '@/components/ui/input';
 import UnitInput from '@/components/UnitInput.vue';
 import { estimateKcal, toNumber } from '@/composables/useMealFood';
+import { NUTRIENTS } from '@/composables/useNutrients';
 import { formatGrams, formatKcal } from '@/composables/useNutritionFormat';
 import type { MealFormItem } from '@/types/meal';
-import { Calculator, ChevronDown, ChevronUp, Star, Trash2 } from 'lucide-vue-next';
+import { Calculator, ChevronDown, ChevronUp, Flame, Star, Trash2 } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 const props = defineProps<{
@@ -17,24 +20,22 @@ const props = defineProps<{
 const item = defineModel<MealFormItem>('item', { required: true });
 const emit = defineEmits<{ remove: []; star: [] }>();
 
-const nutrients = [
-    { field: 'protein_g', label: '蛋白質' },
-    { field: 'carbs_g', label: '碳水' },
-    { field: 'fat_g', label: '脂肪' },
-    { field: 'fiber_g', label: '纖維' },
-] as const;
-
 const estimate = computed(() => estimateKcal(item.value));
 
-// 收合時顯示：份量、重量、三大營養素（都沒填時顯示「營養素未填」）
-const meta = computed(() => {
-    const parts = [item.value.portion, toNumber(item.value.grams) !== null ? `${formatGrams(toNumber(item.value.grams))} g` : ''];
-    const macros = [item.value.protein_g, item.value.carbs_g, item.value.fat_g];
-    const macroLine = macros.some((value) => toNumber(value) !== null)
-        ? `蛋白質 ${formatGrams(toNumber(item.value.protein_g))} · 碳水 ${formatGrams(toNumber(item.value.carbs_g))} · 脂肪 ${formatGrams(toNumber(item.value.fat_g))}`
-        : '營養素未填';
+// 收合時顯示：份量、重量
+const meta = computed(() =>
+    [item.value.portion, toNumber(item.value.grams) !== null ? `${formatGrams(toNumber(item.value.grams))} g` : ''].filter(Boolean).join(' · '),
+);
 
-    return [...parts.filter(Boolean), macroLine].join(' · ');
+// 收合時顯示的三大營養素；都沒填時為 null，改顯示「營養素未填」
+const macros = computed(() => {
+    const values = {
+        protein_g: toNumber(item.value.protein_g),
+        carbs_g: toNumber(item.value.carbs_g),
+        fat_g: toNumber(item.value.fat_g),
+    };
+
+    return Object.values(values).some((value) => value !== null) ? values : null;
 });
 
 /**
@@ -50,7 +51,11 @@ const errorOf = (field: string) => props.errors[`items.${props.index}.${field}`]
                 <div :class="['truncate', item.name.trim() ? 'font-semibold' : 'font-medium text-muted-foreground']">
                     {{ item.name.trim() || '未命名項目' }}
                 </div>
-                <div class="text-xs text-muted-foreground">{{ meta }}</div>
+                <div class="flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap text-xs text-muted-foreground">
+                    <span v-if="meta" class="truncate">{{ meta }}</span>
+                    <MacroValues v-if="macros" :values="macros" />
+                    <span v-else>營養素未填</span>
+                </div>
             </button>
             <span class="mr-0.5 whitespace-nowrap font-bold tabular-nums">
                 {{ toNumber(item.kcal) !== null ? formatKcal(Number(item.kcal)) : '—'
@@ -77,10 +82,11 @@ const errorOf = (field: string) => props.errors[`items.${props.index}.${field}`]
 
         <div v-if="item.open" class="space-y-2.5 border-t border-dashed px-3.5 pb-3.5 pt-2.5">
             <div>
-                <label :for="`item-${item.key}-name`" class="mb-1 block text-xs text-muted-foreground">名稱</label>
+                <FieldLabel :for="`item-${item.key}-name`" required>名稱</FieldLabel>
                 <Input
                     :id="`item-${item.key}-name`"
                     v-model="item.name"
+                    aria-required="true"
                     maxlength="100"
                     placeholder="例如：雞胸肉便當"
                     :class="['h-12', errorOf('name') ? 'border-destructive' : '']"
@@ -89,17 +95,17 @@ const errorOf = (field: string) => props.errors[`items.${props.index}.${field}`]
             </div>
             <div class="grid grid-cols-2 gap-2">
                 <div class="min-w-0">
-                    <label :for="`item-${item.key}-portion`" class="mb-1 block text-xs text-muted-foreground">份量描述（選填）</label>
+                    <FieldLabel :for="`item-${item.key}-portion`">份量描述</FieldLabel>
                     <Input :id="`item-${item.key}-portion`" v-model="item.portion" maxlength="50" placeholder="例如：1 碗" class="h-12" />
                 </div>
                 <div class="min-w-0">
-                    <label :for="`item-${item.key}-grams`" class="mb-1 block text-xs text-muted-foreground">重量（選填）</label>
+                    <FieldLabel :for="`item-${item.key}-grams`">重量</FieldLabel>
                     <UnitInput :id="`item-${item.key}-grams`" v-model="item.grams" unit="g" min="0" :invalid="!!errorOf('grams')" />
                 </div>
             </div>
             <div>
-                <label :for="`item-${item.key}-kcal`" class="mb-1 block text-xs text-muted-foreground">熱量</label>
-                <UnitInput :id="`item-${item.key}-kcal`" v-model="item.kcal" unit="kcal" min="0" :invalid="!!errorOf('kcal')" />
+                <FieldLabel :for="`item-${item.key}-kcal`" :icon="Flame" required>熱量</FieldLabel>
+                <UnitInput :id="`item-${item.key}-kcal`" v-model="item.kcal" unit="kcal" min="0" aria-required="true" :invalid="!!errorOf('kcal')" />
                 <InputError class="mt-1" :message="errorOf('kcal') ?? errorOf('grams')" />
                 <button
                     v-if="estimate !== null"
@@ -111,10 +117,10 @@ const errorOf = (field: string) => props.errors[`items.${props.index}.${field}`]
                 </button>
             </div>
             <div class="grid grid-cols-2 gap-2">
-                <div v-for="nutrient in nutrients" :key="nutrient.field" class="min-w-0">
-                    <label :for="`item-${item.key}-${nutrient.field}`" class="mb-1 block text-xs text-muted-foreground"
-                        >{{ nutrient.label }}（選填）</label
-                    >
+                <div v-for="nutrient in NUTRIENTS" :key="nutrient.field" class="min-w-0">
+                    <FieldLabel :for="`item-${item.key}-${nutrient.field}`" :icon="nutrient.icon" :icon-class="nutrient.textClass">{{
+                        nutrient.label
+                    }}</FieldLabel>
                     <UnitInput
                         :id="`item-${item.key}-${nutrient.field}`"
                         v-model="item[nutrient.field]"

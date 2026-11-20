@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { formatNumber } from '@/composables/useEnergyTargets';
+import { nutrientMeta } from '@/composables/useNutrients';
 import type { EnergyTargets } from '@/types/profile';
+import { Check } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 const props = withDefaults(
@@ -18,6 +20,7 @@ const remaining = computed(() => Math.round(props.targets.calorie_target - props
 const over = computed(() => remaining.value < 0);
 const progress = computed(() => Math.min(1, props.consumedKcal / props.targets.calorie_target));
 const proteinLeft = computed(() => Math.max(0, Math.round(props.targets.protein_target_g - props.consumedProteinG)));
+const protein = nutrientMeta('protein_g');
 const proteinPercent = computed(() => Math.min(100, (props.consumedProteinG / props.targets.protein_target_g) * 100));
 </script>
 
@@ -54,20 +57,22 @@ const proteinPercent = computed(() => Math.min(100, (props.consumedProteinG / pr
             </div>
         </div>
         <div class="mt-4">
-            <div class="flex justify-between text-sm">
-                <span>蛋白質</span>
-                <span class="tabular-nums text-muted-foreground"
-                    >{{ formatNumber(Math.round(consumedProteinG)) }} / {{ targets.protein_target_g }} g</span
-                >
+            <div class="flex items-center gap-1.5 text-sm">
+                <component :is="protein.icon" :class="['size-4', protein.textClass]" aria-hidden="true" />
+                <span class="text-xs text-muted-foreground">{{ protein.label }}</span>
+                <span class="ml-auto tabular-nums">
+                    <b>{{ formatNumber(Math.round(consumedProteinG)) }}</b>
+                    <span class="text-muted-foreground"> / {{ targets.protein_target_g }} g</span>
+                </span>
             </div>
             <div class="mt-2 h-2 overflow-hidden rounded-full bg-muted">
-                <div class="h-full rounded-full bg-primary" :style="{ width: `${proteinPercent}%` }" />
+                <div :class="['h-full rounded-full', protein.bgClass]" :style="{ width: `${proteinPercent}%` }" />
             </div>
-            <div class="mt-2 text-sm">
-                <template v-if="proteinLeft > 0">
-                    還差 <b>{{ proteinLeft }} g</b>
-                </template>
-                <b v-else>已達成蛋白質目標</b>
+            <div class="mt-1.5 flex justify-end text-sm tabular-nums text-muted-foreground">
+                <template v-if="proteinLeft > 0"><span class="sr-only">還差</span>−{{ proteinLeft }} g</template>
+                <span v-else :class="['inline-flex items-center gap-1 font-semibold', protein.textClass]">
+                    <Check class="size-4" aria-hidden="true" /><span class="sr-only">已達成蛋白質目標</span>
+                </span>
             </div>
         </div>
         <slot />
