@@ -126,7 +126,7 @@
 | 資料表 | 主要欄位 |
 |---|---|
 | `users`（擴充） | gender, birth_date, height_cm, activity_level, goal, goal_rate_kg_per_week, bmr_override, timezone, onboarded_at |
-| `social_accounts` | user_id, provider, provider_user_id, email, avatar |
+| `social_accounts` | user_id, provider, provider_user_id, email, name, avatar（詳見 [M2 規格 §2.1](2026-11-20-m2-google-login.md)：每個平台各一組、第三方帳號唯一） |
 | `weight_logs` | user_id, weight_kg, measured_on |
 | `meals` | user_id, eaten_at, meal_type, source(manual/ai), photo_path, status(analyzing/draft/confirmed/failed), note |
 | `meal_items` | meal_id, name, portion, grams, kcal, protein_g, carbs_g, fat_g, fiber_g, confidence |
