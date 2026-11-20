@@ -149,10 +149,12 @@ const activityFactor = computed(() => (props.profile.activity_level ? props.opti
 
             <h2 class="mx-1 mb-1.5 mt-5 text-sm text-muted-foreground">設定</h2>
             <div class="overflow-hidden rounded-xl border bg-card">
-                <div class="flex min-h-[50px] items-center gap-3 border-b px-3.5 py-2.5 text-muted-foreground">
-                    <LinkIcon class="size-4" /><span class="flex-1">已連結帳號</span>
-                    <span class="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold">即將推出</span>
-                </div>
+                <Link
+                    :href="route('fitness.social_login.connected_accounts.index')"
+                    class="flex min-h-[50px] items-center gap-3 border-b px-3.5 py-2.5 hover:bg-muted/50"
+                >
+                    <LinkIcon class="size-4" /><span class="flex-1">已連結帳號</span><ChevronRight class="size-4 text-muted-foreground" />
+                </Link>
                 <Link :href="route('appearance')" class="flex min-h-[50px] items-center gap-3 border-b px-3.5 py-2.5 hover:bg-muted/50">
                     <Sun class="size-4" /><span class="flex-1">外觀</span><ChevronRight class="size-4 text-muted-foreground" />
                 </Link>

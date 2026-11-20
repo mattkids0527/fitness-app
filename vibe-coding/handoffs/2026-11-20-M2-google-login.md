@@ -3,7 +3,7 @@
 - 更新日期：2026-11-20
 - 對應任務：[M2 Google 登入](../milestones/M2-google-login.md)
 - 分支：`milestone/M2-google-login`
-- 目前進度：T1～T3 完成；下一步 T4 前端實作（T4-1 已連結帳號頁與入口）。
+- 目前進度：T1～T3、T4-1 完成；下一步 T4-2 登入頁與回呼提示。
 
 ## 下次接手從這裡開始
 
@@ -39,3 +39,13 @@
 - `GOOGLE_REDIRECT_URI` 沒設定時改用 `route('fitness.social_login.callback', 'google')`（目前網域）；`.env.example` 依規格預設 `${APP_URL}/auth/google/callback`。
 - 取消授權（`error=access_denied`）、state 不符與 Socialite／HTTP 例外皆包成 `SocialAuthFailedException`。
 - 驗證：未填憑證時 `available()` 為空、`/auth/google/redirect` 404；填假 client id 後 302 到 `accounts.google.com/o/oauth2/auth`，帶正確 `redirect_uri`、`scope=openid email profile`、`state`；未設 `GOOGLE_REDIRECT_URI` 時 redirect_uri 為目前網域的 callback；`?error=access_denied` 與錯誤 state 的 callback 皆導回登入頁。既有 67 tests、Pint 通過。
+
+## T4-1 已連結帳號頁與入口
+
+- `pages/social-login/ConnectedAccounts.vue`：套 AppLayout + 設定 Layout；列出可用 provider（`ConnectedAccountItem`），沒有可用 provider 時顯示「目前沒有可連結的服務」；解除連結以 `ResponsiveDialog` 確認後 `router.delete`。
+- `components/social-login/`：`ProviderLogo`（Google 四色 G，其他平台暫用連結圖示，T4-2 登入按鈕共用）、`ConnectedAccountItem`（頭像用 `referrer-policy="no-referrer"`，避免 Google 頭像因 referrer 被擋；連結按鈕用一般 `<a>` 整頁跳轉）。
+- `types/social-login.ts`：`SocialProviderOption`、`SocialLoginSharedData`、`LinkedSocialAccount`、`ConnectedProvider`。
+- `layouts/settings/Layout.vue`：加「已連結帳號」分頁、說明改為「管理帳號、密碼、外觀與已連結帳號」、選取樣式改 `bg-brand-soft text-primary`（其他分頁一併套用）。
+- `pages/profile/Show.vue`：「已連結帳號」列改為連到已連結帳號頁。**與 demo 不同**：右側不顯示「Google／未連結」——那需要每頁多一次查詢或讓 profile 依賴 social-login，而且同區塊的「外觀」列也只有箭頭，保持一致。
+- 解除連結、連結結果的提示（Toast／錯誤提示框）尚未接上，由 T4-2 以共享的 `flash` 處理。
+- 驗證：`npm run build`、`lint`、`format:check` 通過；以暫時帳號在 390px（淺色）與 1280px（深色）檢查已連結、解除確認面板、解除後未連結、我的頁入口，暫時帳號已刪除。
