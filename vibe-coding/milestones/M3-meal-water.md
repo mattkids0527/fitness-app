@@ -1,6 +1,6 @@
 # M3 飲食紀錄（手動）＋喝水
 
-- 狀態：進行中（T1、T2 完成）
+- 狀態：進行中（T1～T3 完成）
 - 建立日期：2026-11-20
 - 分支：`develop`（每個 Task 完成就 commit 並 push；PR `develop` → `main` 由使用者開與合併）
 - 依據規格：[M3 飲食紀錄＋喝水規格](../specs/2026-11-20-m3-meal-water.md)、[專案總覽規格 v1.0](../specs/2026-11-19-project-overview.md) §3.3、§3.5
@@ -50,7 +50,7 @@
 - `WaterTargetCalculator`：透過 profile 的 `WeightLogRepository` 取目前體重，`× 35 ml` 四捨五入到 50 ml，沒有體重紀錄時回傳 null；係數放設定檔
 - 路由 `POST /water-logs`、`DELETE /water-logs/{waterLog}`（只能刪自己今天的），回原頁面並以 `success` flash 顯示 toast
 - 監聽 `DailySummaryCollecting` 加入 `water` 區塊
-- 喝水面板在所有頁面都能打開，需要今天的喝水資料：由模組 Provider 以 `Inertia::share()` 提供，並設為只在打開面板時才載入（partial reload），避免每個請求都查詢。實作方式在此 Task 確認並記錄在 handoff
+- 喝水面板在所有頁面都能打開，需要今天的喝水資料：由模組 Provider 以 `Inertia::share('water', Inertia::optional(...))` 提供（已確認 inertia-laravel 2.0.28 會先合併共享資料再過濾 optional），一般換頁不查詢，打開面板時以 `router.reload({ only: ['water'] })` 載入；記錄／刪除後回原頁面時也不含 `water`，前端要再 reload
 - 語系 `FitnessWater::`；設定檔 `config/fitness/water.php`（每公斤 ml、四捨五入單位、單筆上下限）
 **完成條件**：程式碼檢視符合寫作規範；`migrate:fresh` 成功；`route:list` 看得到 `fitness.water.*`；今日頁的 props 有 `water` 區塊。
 
@@ -83,6 +83,6 @@ M3 新增 migration，合併到 `main` 後照常以 Actions 部署（deploy 會�
 |---|---|
 | T1 設計 demo | 完成（2026-11-20） |
 | T2 meal 模組後端 | 完成（2026-11-20） |
-| T3 water 模組後端 | 未開始 |
+| T3 water 模組後端 | 完成（2026-11-20） |
 | T4 前端實作 | 未開始 |
 | T5 測試 | 未開始 |

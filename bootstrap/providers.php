@@ -6,6 +6,7 @@ use Fitness\Meal\MealServiceProvider;
 use Fitness\Profile\ProfileServiceProvider;
 use Fitness\SocialLogin\SocialLoginServiceProvider;
 use Fitness\SocialLoginGoogle\SocialLoginGoogleServiceProvider;
+use Fitness\Water\WaterServiceProvider;
 
 return [
     AppServiceProvider::class,
@@ -14,4 +15,5 @@ return [
     MealServiceProvider::class,
     SocialLoginServiceProvider::class,
     SocialLoginGoogleServiceProvider::class,
+    WaterServiceProvider::class,
 ];

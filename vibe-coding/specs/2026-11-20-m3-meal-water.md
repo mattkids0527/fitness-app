@@ -128,7 +128,7 @@ M4 的信心度（`confidence`）到 M4 再加。
 | POST | `/water-logs` | `store` | 記錄今天喝的水，回到原頁面 |
 | DELETE | `/water-logs/{waterLog}` | `destroy` | 刪除自己今天的紀錄 |
 
-喝水沒有獨立頁面：今日頁的喝水卡片、＋選單的「喝水」都打開同一個喝水面板（`components/water/WaterSheet.vue`，掛在 `AppSidebarLayout`），開關狀態放 `useQuickActions`。
+喝水沒有獨立頁面：今日頁的喝水卡片、＋選單的「喝水」都打開同一個喝水面板（`components/water/WaterSheet.vue`，掛在 `AppSidebarLayout`），開關狀態放 `useQuickActions`。面板資料來自共享資料 `water`（`Inertia::optional`，打開面板時以 partial reload 載入，格式同 §8 的 `water` 區塊）。
 
 ## 7. 畫面與流程
 
@@ -177,7 +177,12 @@ meal: {
 water: {
     total_ml: number;
     target_ml: number | null; // 沒有體重紀錄時為 null
-    logs: { id: number; amount_ml: number; drank_at: string }[];
+    weight_kg: number | null;
+    ml_per_kg: number;
+    logs: { id: number; amount_ml: number; time: string }[]; // time 為使用者時區 H:i，新的在前
+    quick_amounts: number[];
+    min_ml: number;
+    max_ml: number;
 }
 ```
 
