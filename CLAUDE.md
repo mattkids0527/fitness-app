@@ -124,13 +124,13 @@ CI（`.github/workflows/`）在 push/PR 到 `main`、`develop` 時執行：Pint 
 - 每一份 milestone 依照每一項 Task 依序進行，每執行完一步，詢問使用者是否進行下一步 Task。
 - handoff 記錄這次改動的進度交接，下次開始 session 時參考。
 
-### 分支流程（一個 milestone 一個分支）
+### 分支流程（develop → main，2026-11-20 起）
 
-- 每份 milestone 開始實作前，從最新的 `main` 開一個分支，名稱與 milestone 檔名對應：`milestone/<milestone 檔名>`（例如 `milestone/M1-account-foundation`）。
-- 該 milestone 的所有 Task 都在這個分支上 commit；milestone 與 handoff 檔內記錄對應的分支名稱。
-- 開始 session 時先確認目前分支與進行中的 milestone 相符，不在 `main` 上直接開發。
-- milestone 全部 Task 完成後，push 分支並開 PR 合回 `main`（讓 CI 的 Pint、Prettier、ESLint、PHPUnit 在合併前執行），以 merge commit（`--no-ff`）合併，不用 squash，保留每個 milestone 的起訖節點。
-- 合併後，下一份 milestone 再從更新後的 `main` 開新分支。
+- 開發一律在 `develop` 分支上 commit，不在 `main` 上直接開發，也不再開 `milestone/*` 分支（M1、M2 與 D1 的前半段是舊流程留下的分支）。
+- 每完成一個 Task 就 commit 並 push 到 `origin/develop`；push 到 develop 會觸發 CI（Pint、Prettier、ESLint、PHPUnit）。
+- PR（`develop` → `main`）由使用者自己在 GitHub 開並合併；AI 不替使用者合併，也不在本地把 develop merge 回 main。
+- milestone 與 handoff 檔內記錄分支為 `develop`。
+- 開始 session 時先確認目前在 `develop`，並與 `origin/develop` 同步（`git pull --ff-only`）。
 
 ### 測試情境紀錄（`vibe-coding/tests/`）
 
