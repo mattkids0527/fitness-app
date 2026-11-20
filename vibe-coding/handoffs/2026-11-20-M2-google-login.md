@@ -3,12 +3,13 @@
 - 更新日期：2026-11-20
 - 對應任務：[M2 Google 登入](../milestones/M2-google-login.md)
 - 分支：`milestone/M2-google-login`
-- 目前進度：T1、T2 完成；下一步 T3 `social-login-google` driver。
+- 目前進度：T1～T3 完成；下一步 T4 前端實作（T4-1 已連結帳號頁與入口）。
 
 ## 下次接手從這裡開始
 
 1. 確認在 `milestone/M2-google-login` 分支；`docker compose up -d` 啟動資料庫。
-2. 拉下來後要 `composer dump-autoload`（新增了 `Fitness\SocialLogin` 與 `autoload.files` 的 helper）並 `php artisan migrate`（新表 `social_accounts`）。
+2. 拉下來後要 `composer install`（新增 `laravel/socialite`）、`composer dump-autoload`（新增 `Fitness\SocialLogin`、`Fitness\SocialLoginGoogle` 與 `autoload.files` 的 helper）並 `php artisan migrate`（新表 `social_accounts`）。
+3. 實際點擊驗收前：依 `packages/fitness/social-login-google/README.md` 建立 Google 憑證填入 `.env`；目前本機 `.env` 的 `APP_URL=http://localhost`（沒有 `:8000`），要改成 `http://localhost:8000` 或直接填完整的 `GOOGLE_REDIRECT_URI`，否則 Google 會回 `redirect_uri_mismatch`。
 
 ## T1 設計 demo
 
@@ -28,3 +29,13 @@
 - 綁定寫入包在 `DB::transaction`（savepoint）裡，PostgreSQL 唯一鍵衝突時只回滾該次寫入，再以檢查轉成對應 Exception。
 - 驗證：`migrate:fresh`（測試庫）、rollback 再 migrate 成功；`route:list` 有 5 條 `fitness.social_login.*`；未設定 driver 時 `available()` 為空、登入頁正常、`/auth/google/redirect` 404。另以假 driver 跑過一支暫時的端到端測試（綁定、重複綁定、被他人綁定、登入更新資料、解除、取消授權皆符合預期），已刪除，正式測試於 T5 撰寫。既有 67 tests 通過、Pint 通過。
 - `Inertia::render('social-login/ConnectedAccounts')` 的頁面元件 T4-1 建立。
+
+## T3 `social-login-google` driver
+
+- 模組：`packages/fitness/social-login-google/`，`Drivers\Google` 繼承核心的 abstract `SocialProvider`，Provider 綁定 `fitness.social_login.google`；憑證建立步驟見模組 README。
+- `laravel/socialite ^5.33` 安裝在根目錄 `composer.json`（只有本模組使用），模組 `composer.json` 也列為依賴。
+- Socialite provider 以 `Socialite::buildProvider()` 依模組設定建立（不用 `config/services.php`），每次呼叫重建以取得當下 request；scope 明確設為 `openid email profile`，使用預設 state 驗證。
+- `isConfigured()`：client id 與密鑰都有填才為 true（規格只寫 client id；沒有密鑰時 callback 必定失敗，所以一起檢查）。
+- `GOOGLE_REDIRECT_URI` 沒設定時改用 `route('fitness.social_login.callback', 'google')`（目前網域）；`.env.example` 依規格預設 `${APP_URL}/auth/google/callback`。
+- 取消授權（`error=access_denied`）、state 不符與 Socialite／HTTP 例外皆包成 `SocialAuthFailedException`。
+- 驗證：未填憑證時 `available()` 為空、`/auth/google/redirect` 404；填假 client id 後 302 到 `accounts.google.com/o/oauth2/auth`，帶正確 `redirect_uri`、`scope=openid email profile`、`state`；未設 `GOOGLE_REDIRECT_URI` 時 redirect_uri 為目前網域的 callback；`?error=access_denied` 與錯誤 state 的 callback 皆導回登入頁。既有 67 tests、Pint 通過。
