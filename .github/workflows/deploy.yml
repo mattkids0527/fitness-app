@@ -1,0 +1,114 @@
+name: deploy
+
+# 手動部署：到 Actions → deploy → Run workflow，分支選 main 後執行。
+# 部署目標與正式環境 .env 都從 Environment「production」讀取，設定方式見 deploy/README.md。
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# 同一時間只允許一個部署；後來觸發的會排隊，不會中斷正在進行的部署
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+
+    env:
+      DEPLOY_HOST: ${{ vars.DEPLOY_HOST || secrets.DEPLOY_HOST }}
+
+    steps:
+      - name: Only deploy main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::只能部署 main，目前選的是 ${GITHUB_REF#refs/heads/}"
+          exit 1
+
+      - name: Check production settings
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST_KEY: ${{ secrets.DEPLOY_HOST_KEY }}
+          PRODUCTION_ENV: ${{ secrets.PRODUCTION_ENV }}
+        run: |
+          missing=()
+          for name in DEPLOY_HOST DEPLOY_SSH_KEY DEPLOY_HOST_KEY PRODUCTION_ENV; do
+            [ -n "${!name}" ] || missing+=("$name")
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::Environment production 缺少設定：${missing[*]}（設定方式見 deploy/README.md）"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # 只是為了取得 Deployer 與前端建置需要的 Ziggy，不執行 artisan，所以加 --no-scripts
+      - name: Install Composer Dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress --no-scripts
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      # VM 只有 1GB 記憶體，前端在 runner 上建置後由 Deployer 上傳
+      - name: Build Assets
+        env:
+          VITE_APP_NAME: Fitness
+        run: npm run build
+
+      # 私鑰、known_hosts、.env 都寫在 runner 的暫存目錄（權限 600），部署完一律刪除
+      - name: Prepare SSH Key, Known Hosts and .env
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST_KEY: ${{ secrets.DEPLOY_HOST_KEY }}
+          PRODUCTION_ENV: ${{ secrets.PRODUCTION_ENV }}
+        run: |
+          umask 077
+          dir="$RUNNER_TEMP/deploy"
+          mkdir -p "$dir" ~/.ssh
+
+          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > "$dir/id_deploy"
+
+          # 從 DEPLOY_HOST（[帳號@]IP[:路徑]）取出 IP，和 host 公鑰組成 known_hosts。
+          # DEPLOY_HOST_KEY 可以只貼「ssh-ed25519 AAAA...」，也可以貼 ssh-keyscan 的整行「IP ssh-ed25519 AAAA...」
+          host="${DEPLOY_HOST#*@}"
+          host="${host%%:*}"
+          printf '%s\n' "$DEPLOY_HOST_KEY" | tr -d '\r' \
+            | awk -v host="$host" 'NF { if ($1 ~ /^(ssh-|ecdsa-)/) print host" "$1" "$2; else print host" "$2" "$3 }' \
+            > "$dir/known_hosts"
+          if [ ! -s "$dir/known_hosts" ]; then
+            echo "::error::DEPLOY_HOST_KEY 格式不正確，應為「ssh-ed25519 AAAA...」"
+            exit 1
+          fi
+
+          printf '%s\n' "$PRODUCTION_ENV" > "$dir/production.env"
+
+          {
+            echo "DEPLOY_SSH_KEY_FILE=$dir/id_deploy"
+            echo "DEPLOY_KNOWN_HOSTS_FILE=$dir/known_hosts"
+            echo "DEPLOY_ENV_FILE=$dir/production.env"
+          } >> "$GITHUB_ENV"
+
+      - name: Deploy
+        run: vendor/bin/dep deploy --no-interaction -v
+
+      - name: Clean Up Secrets
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/deploy"

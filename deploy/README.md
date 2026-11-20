@@ -6,6 +6,7 @@
 |---|---|
 | `provision.sh` | VM 初始化腳本：在全新的 Ubuntu 上執行一次，安裝並設定整個執行環境，包含資料庫每日備份與 Cloudflare Tunnel |
 | `../deploy.php` | Deployer 部署設定（見 §8） |
+| `../.github/workflows/deploy.yml` | GitHub Actions 部署按鈕（見 §9） |
 
 ```
 使用者 ──HTTPS──▶ Cloudflare（憑證、快取、DDoS 防護）
@@ -311,6 +312,17 @@ sudo -u postgres bash -c 'f=$(ls -1t /var/backups/fitness-app/*.dump | head -1);
 - VM 只負責 `composer install`、migrate 和快取。
 - 預設部署 `main` 分支。
 
+**正式部署請用 GitHub Actions 的按鈕（見 [§9](#9-github-actions-部署按鈕)）**。從本地部署主要用在除錯，或是 GitHub Actions 無法使用的時候。
+
+`deploy.php` 讀取的環境變數：
+
+| 變數 | 必填 | 說明 |
+|---|---|---|
+| `DEPLOY_HOST` | 是 | 部署目標，格式 `[帳號@]IP[:路徑]`，例如 `deploy@203.0.113.10:/var/www/fitness-app`。帳號預設 `deploy`，路徑預設 `/var/www/fitness-app`，所以只填 IP 也可以 |
+| `DEPLOY_SSH_KEY_FILE` | 否 | 私鑰檔案路徑，預設 `~/.ssh/fitness_deploy` |
+| `DEPLOY_KNOWN_HOSTS_FILE` | 否 | 只信任這個 known_hosts 檔裡的 VM host key（GitHub Actions 使用） |
+| `DEPLOY_ENV_FILE` | 否 | 要上傳成正式環境 `.env` 的檔案。不提供時沿用 VM 上現有的 `.env` |
+
 ### 從本地（WSL）部署
 
 **第一次部署前，先用部署金鑰連線一次**，把 VM 的 host key 記到 `~/.ssh/known_hosts`。Deployer 不能回答「是否信任這台主機」的提示：
@@ -333,7 +345,8 @@ DEPLOY_HOST=<VM 外部 IP> vendor/bin/dep deploy
 
 1. 確認 `public/build/manifest.json` 存在。
 2. 在 VM 建立新的版本目錄，從 GitHub 拉取 `main`。
-3. 連結 `shared/.env`、`shared/storage`。
+3. 有提供 `DEPLOY_ENV_FILE` 時：檢查內容（`APP_ENV` 必須是 `production`、`APP_KEY` 不能是空的），把舊版備份成 `shared/.env.previous`，再上傳新的 `.env`。
+   然後連結 `shared/.env`、`shared/storage`。
 4. 執行 `composer install --no-dev`。
 5. 上傳 `public/build/`。
 6. 建立 `storage:link`；執行 `config`、`route`、`view`、`event` 的快取，以及 `migrate --force`。
@@ -373,9 +386,13 @@ DEPLOY_HOST=<VM 外部 IP> vendor/bin/dep deploy:unlock
 
 ### 修改正式環境的 `.env`
 
-正式環境的設定只放在 VM 的 `/var/www/fitness-app/shared/.env`，不在 git 裡。修改後一定要做下面這一步，因為部署時已經執行 `config:cache`，PHP 也會用 OPcache 快取程式，不重建快取的話網站會繼續讀舊的設定。
+設定 GitHub Actions 部署（§9）之後，**正式環境 `.env` 的來源是 GitHub Secret `PRODUCTION_ENV`**。
 
-在瀏覽器版 SSH 執行：
+- 要改設定：到 GitHub 修改 `PRODUCTION_ENV`，再按一次部署按鈕。新的 `.env` 會在建立快取之前上傳，所以會隨這次部署生效。
+- 不要直接改 VM 上的 `shared/.env`，下次部署時會被覆蓋。
+- 改錯了想退回：VM 上的 `shared/.env.previous` 是上一版。
+
+**緊急情況下直接改 VM**：例如 GitHub 無法使用時。改完一定要重建快取並 reload php-fpm，網站才會讀到新設定。因為部署時已經執行 `config:cache`，PHP 也會用 OPcache 快取程式。事後記得把同樣的修改也更新到 `PRODUCTION_ENV`，不然下次部署會被蓋回去。
 
 ```bash
 sudo -u deploy nano /var/www/fitness-app/shared/.env
@@ -385,9 +402,7 @@ sudo -u deploy nano /var/www/fitness-app/shared/.env
 cd /var/www/fitness-app/current && sudo -u deploy php artisan config:cache && sudo systemctl reload php8.4-fpm
 ```
 
-也可以改用重新部署（`dep deploy`），效果一樣。
-
-**正式環境的 Google 登入**：在 Google Cloud 建立正式環境專用的 OAuth 用戶端（網頁應用程式），已授權的重新導向 URI 填 `https://wn52777.com/auth/google/callback`。把用戶端 ID 和密鑰填入 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET` 後重建快取，登入頁就會出現 Google 按鈕。詳細步驟見 [social-login-google 模組說明](../packages/fitness/social-login-google/README.md)。
+**正式環境的 Google 登入**：在 Google Cloud 建立正式環境專用的 OAuth 用戶端（網頁應用程式），已授權的重新導向 URI 填 `https://wn52777.com/auth/google/callback`。把用戶端 ID 和密鑰填入 `PRODUCTION_ENV` 的 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET` 後重新部署，登入頁就會出現 Google 按鈕。詳細步驟見 [social-login-google 模組說明](../packages/fitness/social-login-google/README.md)。
 
 ### 建立正式環境帳號
 
@@ -415,6 +430,62 @@ ssh -t -i ~/.ssh/fitness_deploy deploy@<VM 外部 IP> "cd /var/www/fitness-app/c
 >
 > 用自己的帳號或 root 直接執行，可能會在 `storage/` 留下不屬於 `deploy` 的 log 或快取檔，網站寫不進去就會出錯。用 `sudo find /var/www/fitness-app/shared/storage ! -user deploy` 可以檢查，沒有輸出才是正常的。
 
+## 9. GitHub Actions 部署按鈕
+
+`.github/workflows/deploy.yml` 只能手動觸發，而且只能部署 `main`。流程如下：
+
+1. 在 GitHub 的機器上 checkout `main`，安裝相依套件，`npm run build`。
+2. 從 Environment `production` 讀取部署目標、SSH 金鑰、VM host key、`.env`。
+3. 執行 `vendor/bin/dep deploy`，和 §8 的流程相同，會上傳 `.env`。
+
+### 第一次設定
+
+**1. 建立 Environment**
+
+到 GitHub repo → **Settings → Environments → New environment**，名稱填 `production`。
+
+建立後，在 **Deployment branches and tags** 選 **Selected branches and tags**，加入 `main`。這樣只有 `main` 能讀取下面的 Secrets。
+
+**2. 設定四個值**
+
+| 類型 | 名稱 | 值 | 怎麼取得 |
+|---|---|---|---|
+| Variable | `DEPLOY_HOST` | `deploy@<VM 外部 IP>:/var/www/fitness-app` | GCP 主控台 VM 列表的「外部 IP」 |
+| Secret | `DEPLOY_SSH_KEY` | 部署用私鑰的完整內容，包含 `-----BEGIN` 和 `-----END` 兩行 | 在 WSL 執行 `cat ~/.ssh/fitness_deploy` |
+| Secret | `DEPLOY_HOST_KEY` | VM 的 SSH host 公鑰，例如 `ssh-ed25519 AAAA... root@...` | 在 VM 的瀏覽器版 SSH 執行 `cat /etc/ssh/ssh_host_ed25519_key.pub` |
+| Secret | `PRODUCTION_ENV` | 整份正式環境 `.env` | 在 VM 的瀏覽器版 SSH 執行 `sudo -u deploy cat /var/www/fitness-app/shared/.env` |
+
+- **`DEPLOY_HOST` 放在 Variables 分頁**，方便隨時查看目前的值。如果放在 Secrets，workflow 也讀得到。
+- **`DEPLOY_HOST_KEY`** 只存公鑰，不綁 IP，workflow 會用 `DEPLOY_HOST` 的 IP 組出 `known_hosts`。所以 VM 換 IP 時不用改，只有重建 VM 時才要更新。
+- **`PRODUCTION_ENV`** 一定要從 VM 上的 `.env` **整份複製**，不要重新產生：
+  - `APP_KEY` 換掉會讓所有登入狀態失效。
+  - `DB_PASSWORD` 要和 `provision.sh` 建立的資料庫帳號一致。
+  - 要開啟 Google 登入的話，可以在這時候一起填上 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`。
+- **GitHub Secret 存進去後就看不到內容了**，只能整份覆蓋。請在密碼管理器之類的地方，保留一份完整的 `.env`。
+
+**3. 保護 `main` 分支**
+
+到 **Settings → Branches → Add branch ruleset**（或 Add classic branch protection rule），對象設 `main`：
+
+- 勾選 **Require a pull request before merging**。
+- 勾選 **Require status checks to pass**，加入 `quality`（lint）和 `ci`（tests）。這兩個名稱要等 workflow 在 GitHub 上跑過一次後，才搜尋得到。
+
+### 部署
+
+1. 開 PR 把 `develop` 合併進 `main`。
+2. 到 **Actions → deploy → Run workflow**，分支選 `main`，按 **Run workflow**。
+
+> `deploy.yml` 必須已經在 `main` 上，Actions 頁面才會出現 **Run workflow** 按鈕。所以第一次要先把 `develop` 合進 `main`。
+
+### 常見的變更
+
+| 想做的事 | 做法 |
+|---|---|
+| VM 外部 IP 換了 | 改 Variable `DEPLOY_HOST`，再按一次部署 |
+| 修改 `.env`（例如加 Google 憑證） | 整份更新 Secret `PRODUCTION_ENV`，再按一次部署 |
+| 重建了 VM | 更新 `DEPLOY_HOST_KEY`、`DEPLOY_HOST`；`PRODUCTION_ENV` 的 `DB_PASSWORD` 要換成新 VM 產生的密碼 |
+| 換部署金鑰 | 新的公鑰加進 VM 的 `/home/deploy/.ssh/authorized_keys`，再更新 `DEPLOY_SSH_KEY` |
+
 ## 疑難排解
 
 - **用 `deploy` 帳號登不進去**：主控台的瀏覽器版 SSH 是用 Google 自動產生的金鑰登入你自己的帳號，不受腳本「關閉密碼登入」的影響，可以先從那邊登入檢查 `/home/deploy/.ssh/authorized_keys`。腳本對 SSH 的設定都在 `/etc/ssh/sshd_config.d/99-fitness-app.conf`。
@@ -425,4 +496,6 @@ ssh -t -i ~/.ssh/fitness_deploy deploy@<VM 外部 IP> "cd /var/www/fitness-app/c
   - 確認 Public Hostname 的 Service 是 `HTTP` → `127.0.0.1:80`。
   - 在 VM 上用 `curl -H "Host: wn52777.com" http://127.0.0.1/` 測試 nginx 本身有沒有回應。
 - **網站打不開，DNS 查到 `127.0.0.1`**：DNS 被手動設成 A 紀錄了。刪掉那筆紀錄，改在 Tunnel 的 Public Hostname 新增網域，讓 Cloudflare 自動建立 CNAME（見 §4）。
+- **GitHub Actions 部署出現 `Host key verification failed`**：`DEPLOY_HOST_KEY` 和 VM 實際的 host key 不一致。可能是重建了 VM，或是 `DEPLOY_HOST` 填成別台機器的 IP。到 VM 上重新執行 `cat /etc/ssh/ssh_host_ed25519_key.pub` 確認。
+- **GitHub Actions 部署出現 `.env 的 APP_ENV 必須是 production` 或 `缺少 APP_KEY`**：`PRODUCTION_ENV` 貼錯或是空的，VM 上的 `.env` 沒有被動到。
 - **要換 Tunnel token**：先執行 `sudo cloudflared service uninstall`，再重跑 `provision.sh` 貼上新的 token。

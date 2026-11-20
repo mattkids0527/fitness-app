@@ -86,7 +86,7 @@ GitHub Actions（手動觸發 deploy.yml，只能選 main）
         ▼
 VM：/var/www/fitness-app
   ├── releases/<n>/      每次部署一個新目錄，保留最近 3 個
-  ├── shared/.env        正式環境設定（只放在 VM 上，不進 git、不進 GitHub Secrets）
+  ├── shared/.env        正式環境設定（來源是 GitHub Secret `PRODUCTION_ENV`，每次部署覆蓋；不進 git）
   ├── shared/storage/    上傳檔案、log、session 與快取檔
   └── current → releases/<n>    nginx 的 root 指向 current/public
 ```
@@ -123,23 +123,39 @@ Deployer 每次部署的步驟：
 - `deploy` 帳號的 sudo 只開放 `systemctl reload php8.4-fpm` 這一條指令（寫在 sudoers）。
 - 防火牆（GCP 防火牆規則 + ufw）只開 22。網站流量全部經由 Cloudflare Tunnel 進來，80／443 不對外開放。GitHub Actions 的 IP 不固定，22 port 只能對外開放，搭配只用金鑰登入與 fail2ban 防護。
 - 開啟 `unattended-upgrades`，自動安裝安全性更新。
-- 正式環境 `.env`：`APP_ENV=production`、`APP_DEBUG=false`、新產生的 `APP_KEY`、資料庫使用專用帳號與強密碼。
+- 正式環境 `.env`：`APP_ENV=production`、`APP_DEBUG=false`、`provision.sh` 產生的 `APP_KEY`、資料庫使用專用帳號與強密碼。內容存放在 GitHub Secret `PRODUCTION_ENV`（見 §7）。
 - 正式環境的帳號用 SSH 連進 VM 後執行 `php artisan user:create` 建立；`db:seed` 只在 local 環境執行，不會在正式環境建立開發帳號。
 
-## 7. GitHub 設定
+## 7. GitHub 設定（2026-11-20 改版：部署目標與 `.env` 都由 GitHub 管理）
+
+部署目標（IP、路徑、帳號）與正式環境的 `.env` 都放在 GitHub。VM 換 IP 或要改設定時，只要到 GitHub 修改，再按一次部署按鈕即可，不必 SSH 進 VM。
 
 **`deploy.yml`**
 - 觸發：`workflow_dispatch`；job 開頭檢查 `github.ref == 'refs/heads/main'`，不是 `main` 就直接失敗。
-- 使用 GitHub Environment `production`，Secrets 放在這個 Environment 底下。
+- 使用 GitHub Environment `production`，設定與 Secrets 都放在這個 Environment 底下；Environment 限制只有 `main` 分支能使用。
 - `concurrency: production`，同一時間只會有一個部署在跑。
+- `workflow_dispatch` 的按鈕只會在 `deploy.yml` 已經存在於預設分支（`main`）後出現，所以要先把 `develop` 合進 `main`。
 
-**Secrets（Environment `production`）**
+**Environment `production` 的設定**
 
-| 名稱 | 內容 |
-|---|---|
-| `SSH_PRIVATE_KEY` | `deploy` 帳號的私鑰（為部署專用的新金鑰） |
-| `SSH_KNOWN_HOSTS` | VM 的 host key（`ssh-keyscan` 產生），避免中間人攻擊 |
-| `DEPLOY_HOST` | VM 的外部 IP（網域經過 Cloudflare Tunnel，不能用來 SSH）；臨時 IP 換掉時要更新這個值與 `SSH_KNOWN_HOSTS` |
+| 名稱 | 內容 | 說明 |
+|---|---|---|
+| `DEPLOY_HOST` | `deploy@<VM 外部 IP>:/var/www/fitness-app` | 部署目標：帳號、IP、路徑合在一個值。帳號與路徑可省略（預設 `deploy`、`/var/www/fitness-app`）。IP 不是機密，建議放 **Variable**，方便直接查看；放 Secret 也可以，workflow 兩邊都會讀 |
+| `DEPLOY_SSH_KEY` | 部署用私鑰（`~/.ssh/fitness_deploy` 的內容） | Secret |
+| `DEPLOY_HOST_KEY` | VM 的 SSH host 公鑰，例如 `ssh-ed25519 AAAA...` | Secret。只存公鑰、不綁 IP，workflow 用 `DEPLOY_HOST` 的 IP 組出 `known_hosts`，**換 IP 時不用改**；VM 重建才需要更新 |
+| `PRODUCTION_ENV` | 整份正式環境 `.env` | Secret。每次部署都會上傳並覆蓋 VM 的 `shared/.env` |
+
+**`.env` 的上傳規則**（`deploy.php` 的 `deploy:upload_env`）
+- 有提供 `.env`（環境變數 `DEPLOY_ENV_FILE` 指向的檔案）時才上傳；從本地手動部署且沒提供時，沿用 VM 上現有的 `.env`。
+- 上傳前檢查：`APP_ENV=production`，且 `APP_KEY` 不能是空的，不符合就中止部署，避免一份空的或貼錯的 `.env` 蓋掉正式設定。
+- 上傳前先把 VM 上原本的版本備份成 `shared/.env.previous`。
+- 在 `artisan:config:cache` 之前完成，所以新設定會隨這次部署一起生效。
+
+**取捨**
+- GitHub Secret 存進去後看不到內容，只能整份覆蓋；使用者需自行保留一份完整的 `.env`（例如放在密碼管理器）。
+- GitHub 是 `.env` 的唯一來源：直接在 VM 上修改 `.env`，下次部署時會被覆蓋。
+- `APP_KEY`、資料庫密碼、Google 密鑰改存在 GitHub。有 repo 寫入權限的人理論上可以修改 workflow 把它印出來；目前 repo 只有使用者本人，且 Environment 限制只有 `main` 能使用。
+- 第一次設定時，要把 VM 上 `provision.sh` 產生的 `.env` 整份複製到 `PRODUCTION_ENV`，不能重新產生，否則 `APP_KEY` 改變會讓所有登入狀態失效，資料庫密碼也會對不上。
 
 **分支保護**：`main` 設定必須透過 PR 合併，`quality`（lint）與 `ci`（tests）兩項檢查通過才能合併。
 

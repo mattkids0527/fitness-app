@@ -72,10 +72,20 @@
 新增 `.github/workflows/deploy.yml`，依規格 §7：
 - 觸發方式 `workflow_dispatch`，不是 `main` 就直接失敗
 - 使用 Environment `production`，設定 `concurrency: production`
-- 步驟：安裝相依套件、`npm run build`、用 Secrets 設定 SSH、執行 `dep deploy production`
+- 步驟：安裝相依套件、`npm run build`、用 `DEPLOY_SSH_KEY` 與 `DEPLOY_HOST_KEY` 設定 SSH、把 `PRODUCTION_ENV` 寫成暫存檔、執行 `dep deploy`
 
-整理 GitHub 網頁上要做的設定步驟，寫進 `deploy/README.md`：建立 Environment 與三個 Secrets、`main` 分支保護（必須透過 PR，`quality` 與 `ci` 都通過才能合併）。由使用者在 GitHub 上操作。
-**完成條件**：YAML 語法正確；使用者已完成 Environment、Secrets 與分支保護設定。
+`deploy.php` 配合調整：
+- `DEPLOY_HOST` 改為 `[帳號@]IP[:路徑]` 格式，帳號、路徑可省略
+- 新增 `deploy:upload_env`：有提供 `.env` 時，檢查內容後備份舊版並上傳
+
+整理 GitHub 網頁上要做的設定步驟，寫進 `deploy/README.md`：
+- 建立 Environment `production`，並限制只有 `main` 能使用
+- 設定 `DEPLOY_HOST`、`DEPLOY_SSH_KEY`、`DEPLOY_HOST_KEY`、`PRODUCTION_ENV`
+- 把 VM 現有的 `.env` 搬到 `PRODUCTION_ENV`
+- 設定 `main` 分支保護：必須透過 PR，`quality` 與 `ci` 都通過才能合併
+
+GitHub 上的設定由使用者操作。
+**完成條件**：YAML 語法正確（actionlint）；`deploy.php` 的 `DEPLOY_HOST` 解析與 `.env` 上傳在本地容器驗證過；使用者已完成 Environment、Secrets 與分支保護設定。
 
 ### T7 第一次正式部署與收尾
 在 Google Cloud 建立正式環境的 OAuth 用戶端（redirect URI `https://wn52777.com/auth/google/callback`，規格 §3.5），憑證填入 VM 的 `shared/.env`。本分支 push 後開 PR，確認新的 CI 正常運作（格式錯誤會讓 CI 失敗）。合併 `main` 後，在 Actions 頁面手動觸發部署，然後照上線檢查清單逐項確認：
