@@ -478,12 +478,37 @@ ssh -t -i ~/.ssh/fitness_deploy deploy@<VM 外部 IP> "cd /var/www/fitness-app/c
 
 > `deploy.yml` 必須已經在 `main` 上，Actions 頁面才會出現 **Run workflow** 按鈕。所以第一次要先把 `develop` 合進 `main`。
 
+### 更新 `PRODUCTION_ENV`
+
+GitHub Secret 存進去後**看不到內容**，只能整份覆蓋。但 VM 上的 `shared/.env` 就是最近一次部署上傳的那份，內容和 `PRODUCTION_ENV` 相同，所以更新時從 VM 讀出來改：
+
+1. 讀出目前的內容，下面兩種方式擇一：
+
+   在 GCP 瀏覽器版 SSH 執行：
+
+   ```bash
+   sudo -u deploy cat /var/www/fitness-app/shared/.env
+   ```
+
+   或是在你的電腦執行：
+
+   ```bash
+   ssh -i ~/.ssh/fitness_deploy deploy@<VM 外部 IP> cat /var/www/fitness-app/shared/.env
+   ```
+
+2. 整份複製到編輯器，只修改需要改的值。`APP_KEY`、`DB_PASSWORD` 不要動。
+3. GitHub → Settings → Environments → `production` → 編輯 `PRODUCTION_ENV` → 貼上**整份**修改後的內容 → Update secret。
+4. Actions → deploy → Run workflow（分支 `main`）。
+5. 如果有存成暫存檔，用完就刪掉。不要放在雲端同步的資料夾或專案目錄裡。
+
+改錯了想恢復：VM 上的 `shared/.env.previous` 是上一版。用 `sudo -u deploy cat /var/www/fitness-app/shared/.env.previous` 讀出來，貼回 `PRODUCTION_ENV`，再部署一次即可。
+
 ### 常見的變更
 
 | 想做的事 | 做法 |
 |---|---|
 | VM 外部 IP 換了 | 改 Variable `DEPLOY_HOST`，再按一次部署 |
-| 修改 `.env`（例如加 Google 憑證） | 整份更新 Secret `PRODUCTION_ENV`，再按一次部署 |
+| 修改 `.env`（例如加 Google 憑證） | 從 VM 讀出目前的 `.env`，修改後整份更新 Secret `PRODUCTION_ENV`，再按一次部署（見上一節） |
 | 重建了 VM | 更新 `DEPLOY_HOST_KEY`、`DEPLOY_HOST`；`PRODUCTION_ENV` 的 `DB_PASSWORD` 要換成新 VM 產生的密碼 |
 | 換部署金鑰 | 新的公鑰加進 VM 的 `/home/deploy/.ssh/authorized_keys`，再更新 `DEPLOY_SSH_KEY` |
 
