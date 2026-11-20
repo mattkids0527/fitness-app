@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 專案概述
 
-以 Laravel 12 官方 Vue Starter Kit 為基礎建立的手機優先飲食／健身紀錄應用（M1 帳號基礎已完成：首次設定、BMR／每日目標、體重紀錄、今日頁、底部 Tab 版型、PWA；M2 Google 登入已完成：設定頁綁定／解除 Google、以已綁定的 Google 帳號登入；D1 部署已完成：正式站 https://wn52777.com，GCP e2-micro + Cloudflare Tunnel，GitHub Actions 手動部署；M3 飲食＋喝水已完成：手動記錄餐點、常用食物／最近吃過／複製整餐快速帶入、喝水面板與建議量、今日頁實際攝取；U1 介面精簡已完成：手機鎖住縮放、營養素與卡片改用圖示；D2 發版版號：部署時填版號、成功後打 tag 與 GitHub Release，設定頁「版本」分頁顯示目前版本）。技術堆疊：Laravel 12 + Inertia.js 2 + Vue 3（TypeScript）+ Tailwind CSS 3 + shadcn-vue（radix-vue）+ Ziggy。資料庫為 PostgreSQL 16（以 `docker-compose.yml` 在本地起容器，對外 port 54329；開發庫 `fitness_app`、測試庫 `fitness_app_testing`）。語系 `zh_TW`（框架內建訊息在 `lang/zh_TW/`），時區 `Asia/Taipei`。
+以 Laravel 12 官方 Vue Starter Kit 為基礎建立的手機優先飲食／健身紀錄應用（M1 帳號基礎已完成：首次設定、BMR／每日目標、體重紀錄、今日頁、底部 Tab 版型、PWA；M2 Google 登入已完成：設定頁綁定／解除 Google、以已綁定的 Google 帳號登入；D1 部署已完成：正式站 https://wn52777.com，GCP e2-micro + Cloudflare Tunnel，GitHub Actions 手動部署；M3 飲食＋喝水已完成：手動記錄餐點、常用食物／最近吃過／複製整餐快速帶入、喝水面板與建議量、今日頁實際攝取；U1 介面精簡已完成：手機鎖住縮放、營養素與卡片改用圖示；D2 發版版號已完成：部署時填版號、成功後打 tag 與 GitHub Release，設定頁「版本」分頁顯示目前版本）。技術堆疊：Laravel 12 + Inertia.js 2 + Vue 3（TypeScript）+ Tailwind CSS 3 + shadcn-vue（radix-vue）+ Ziggy。資料庫為 PostgreSQL 16（以 `docker-compose.yml` 在本地起容器，對外 port 54329；開發庫 `fitness_app`、測試庫 `fitness_app_testing`）。語系 `zh_TW`（框架內建訊息在 `lang/zh_TW/`），時區 `Asia/Taipei`。
 
 ## 常用指令
 
@@ -83,7 +83,7 @@ CI（`.github/workflows/`）在 push/PR 到 `main`、`develop` 時執行：`lint
 - 架構：Cloudflare（`wn52777.com`，HTTPS、`/build/` 邊緣快取）→ Tunnel → GCP e2-micro（1GB RAM）上的 nginx（只聽 127.0.0.1:80）→ PHP 8.4-FPM（以 `deploy` 身分執行）→ PostgreSQL 16。VM 只開 SSH；nginx 對 PHP 固定 `HTTPS=on`，並以 `CF-Connecting-IP` 作為使用者 IP，所以 Laravel 不需要 `trustProxies`。
 - VM 環境由 `deploy/provision.sh` 建立（可重複執行）。CD 只部署程式碼；要改 PHP 擴充、nginx、cron、queue worker 等系統設定時，改這支腳本，再到 VM 重跑。
 - 部署用 Deployer（`deploy.php`，`recipe/laravel.php`，保留 3 個版本）。前端在 runner／本地建置後上傳，VM 不跑 npm。
-- 版號：`vMAJOR.MINOR.PATCH`，新功能（M 系列）升中間碼，修 bug／介面調整（U）／部署流程（D）升最後一碼；第一版 `v1.3.0`。workflow 以 `deploy/check-version.sh` 擋下格式錯誤、重複、比最新 tag 小的版號，以 `--revision=$GITHUB_SHA` 部署，Deployer 在版本目錄寫 `version.json`（版號、commit、部署時間，`.gitignore` 已排除），成功後才打 annotated tag 並 `gh release create --generate-notes`。設定頁「版本」由 `app/Support/AppVersion.php` 讀 `version.json`，只顯示版號與更新日期（commit 不給畫面），`dep rollback` 後顯示的版號跟著退回。
+- 版號：`vMAJOR.MINOR.PATCH`，新功能（M 系列）升中間碼，修 bug／介面調整（U）／部署流程（D）升最後一碼；第一個 tag 是 `v1.3.1`（規格原訂 `v1.3.0`，實際沒有用到）。workflow 以 `deploy/check-version.sh` 擋下格式錯誤、重複、比最新 tag 小的版號，以 `--revision=$GITHUB_SHA` 部署，Deployer 在版本目錄寫 `version.json`（版號、commit、部署時間，`.gitignore` 已排除），成功後才打 annotated tag 並 `gh release create --generate-notes`。設定頁「版本」由 `app/Support/AppVersion.php` 讀 `version.json`，只顯示版號與更新日期（commit 不給畫面），`dep rollback` 後顯示的版號跟著退回。
 - GitHub Environment `production`：`DEPLOY_HOST`（Variable，`[帳號@]IP[:路徑]`）、`DEPLOY_SSH_KEY`、`DEPLOY_HOST_KEY`、`PRODUCTION_ENV`（整份正式環境 `.env`，每次部署覆蓋 VM 的 `shared/.env`，舊版存成 `.env.previous`）。改正式設定要改 `PRODUCTION_ENV` 再部署，不要直接改 VM 的 `.env`。
 - 正式環境 `QUEUE_CONNECTION=sync`、沒有排程；之後有 queue job（M4）要在 `provision.sh` 加 worker。資料庫每天 03:00 備份到 `/var/backups/fitness-app/`（保留 7 份）。
 - migration 要相容新舊版程式（`coding-style.md` §12），因為 `dep rollback` 不會退回資料庫。在 VM 上執行 artisan 一律 `sudo -u deploy php artisan ...`。

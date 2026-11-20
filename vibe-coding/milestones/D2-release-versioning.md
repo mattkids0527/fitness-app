@@ -1,13 +1,13 @@
 # D2 發版版號
 
-- 狀態：進行中
+- 狀態：完成（2026-11-21，已合併 `main`、以 `v1.3.3` 部署並在正式站驗收；交接見 [handoff](../handoffs/2026-11-21-D2-release-versioning.md)）
 - 建立日期：2026-11-21
 - 分支：`develop`（每個 Task 完成就 commit 並 push；PR `develop` → `main` 由使用者開與合併）
 - 依據規格：[D2 發版版號規格](../specs/2026-11-21-d2-release-versioning.md)
 
 ## 目標
 
-正式部署必須填版號，部署成功後自動打 tag、建 GitHub Release；設定頁新增「版本」分頁顯示目前版本。第一個版本為 `v1.3.0`。
+正式部署必須填版號，部署成功後自動打 tag、建 GitHub Release；設定頁新增「版本」分頁顯示目前版本。第一個版本原訂 `v1.3.0`，實際是 `v1.3.1`。
 
 ## 範圍
 
@@ -33,13 +33,15 @@
 **完成條件**：以 `actionlint`（或人工檢查）確認 workflow 語法；本地以假的版號跑驗證腳本確認格式、重複、比舊版小三種情況會被擋；`dep` 指令能正常載入設定（`vendor/bin/dep list`）。
 - 實作紀錄：版號檢查獨立成 `deploy/check-version.sh`（可在本地先跑），checkout 改 `fetch-depth: 0` 才拿得到 tag。版號只透過環境變數 `DEPLOY_VERSION` 使用，不直接嵌進指令。`version.json` 的 commit 取自 Deployer 寫的 `REVISION`，task 掛在 `deploy:update_code` 之後；本地沒給 `DEPLOY_VERSION` 只警告不中止，格式錯誤則中止。tag 由 `github-actions[bot]` 建立，push tag 不會觸發其他 workflow。驗證：actionlint 通過；在暫存 repo 測試空值、`1.3.0`、`v1.3`、`v01.3.0`、夾帶 `;` 被擋，已存在、比最新小被擋，`v1.9.10` 正確判斷大於 `v1.9.2`；`dep deploy --plan` 確認 task 順序，錯誤的 `DEPLOY_VERSION` 會中止；deploy task 寫出的 JSON 經 `AppVersion` 讀回正確。實際的 tag 與 Release 要等 T3 在 GitHub 上部署時才驗證得到。
 
-### T3 上線 v1.3.0
+### T3 上線（完成）
 使用者合併 PR 到 `main` 後，以 `v1.3.0` 執行部署；確認 GitHub 上出現 tag 與 Release、正式站設定頁顯示 `v1.3.0`。寫 handoff，milestone 標為完成。
 **完成條件**：正式站驗收。
+- 實作紀錄：實際依序以 `v1.3.1`、`v1.3.2`、`v1.3.3` 部署，三個 tag 與 Release 都由 workflow 建立，`v1.3.0` 沒有用到。
 
 ## 進度
 
 - 2026-11-21 T1 完成：設定頁「版本」分頁、5 個測試，全部 PHPUnit 通過。
 - 2026-11-21 追加：「我的」頁「版本」列與測試 ver-06，全部 128 個 PHPUnit 通過。
 - 2026-11-21 T3 進行中：已以 `v1.3.1`（T2）與 `v1.3.2`（「我的」頁版本列）部署，GitHub 上有對應 tag 與 Release，使用者驗收 OK（沒有 `v1.3.0` tag，第一版直接是 `v1.3.1`）。驗收後調整：版本頁拿掉 commit，部署時間改成只顯示「更新日期」，待以 `v1.3.3` 部署。
+- 2026-11-21 T3 完成：`v1.3.3` 已部署（PR #6），milestone 完成。收尾時一併處理 M2 待決事項：未綁定 Google 登入的錯誤說明加上「還沒有帳號的話，請聯絡管理員。」，待下次部署（建議 `v1.3.4`）。
 - 2026-11-21 T2 完成：deploy workflow 版號輸入與檢查、固定 commit、成功後打 tag 與 Release，Deployer 寫 `version.json`，文件更新。

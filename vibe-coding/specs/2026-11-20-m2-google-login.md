@@ -12,7 +12,7 @@
 
 - 第一版只做 Google。
 - 帳號一定先有 Email + 密碼（由 `user:create` 建立），綁定 Google 是登入後的動作。
-- 未綁定的 Google 帳號嘗試登入 → 拒絕，提示「請先以帳號密碼登入，再到設定頁綁定 Google」。
+- 未綁定的 Google 帳號嘗試登入 → 拒絕，提示「請先以帳號密碼登入，再到設定頁綁定 Google」。說明最後加上「還沒有帳號的話，請聯絡管理員。」（已決，2026-11-21）
 - 因為每個帳號都有密碼，Google 帳號遺失時仍可用帳密登入並解除綁定。
 - 模組拆成 `social-login`（核心）與 `social-login-google`（driver）。
 
@@ -78,7 +78,7 @@
 1. 登入頁「使用 Google 登入」→ `/auth/google/redirect` → Google。
 2. 回到 callback：以 `(provider, provider_user_id)` 找綁定紀錄。
    - 找到 → 登入該使用者 → 進今日頁（未完成首次設定的照樣被導到 `/onboarding`）。
-   - 找不到 → 回登入頁，顯示「這個 Google 帳號尚未連結，請先以帳號密碼登入，再到設定頁綁定 Google」。
+   - 找不到 → 回登入頁，顯示「這個 Google 帳號尚未連結，請先以帳號密碼登入，再到設定頁綁定 Google。還沒有帳號的話，請聯絡管理員」。
    - **不**用 email 比對自動綁定（避免帳號被接管）。
 3. 每次登入時更新綁定紀錄的 email／name／avatar。
 

@@ -47,7 +47,7 @@ class SocialLoginTest extends TestCase
             ->assertRedirect(route('login'))
             ->assertSessionHas('error', [
                 'title' => '這個 Google 帳號尚未連結',
-                'message' => '請先用 Email 與密碼登入，再到「設定 › 已連結帳號」連結 Google。',
+                'message' => '請先用 Email 與密碼登入，再到「設定 › 已連結帳號」連結 Google。還沒有帳號的話，請聯絡管理員。',
             ]);
 
         $this->assertGuest();
