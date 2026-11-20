@@ -51,6 +51,14 @@ class FakeFoodAnalyzer extends FoodImageAnalyzer
     }
 
     /**
+     * 固定的提示詞，有補充說明時接在後面。
+     */
+    public function prompt(?string $hint = null): string
+    {
+        return '辨識照片中的食物。'.($hint === null ? '' : "\n補充說明：{$hint}");
+    }
+
+    /**
      * 模型 ID。
      */
     public function model(): string

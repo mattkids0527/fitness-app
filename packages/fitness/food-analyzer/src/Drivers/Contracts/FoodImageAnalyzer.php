@@ -20,7 +20,12 @@ interface FoodImageAnalyzer
     public function analyze(FoodImage $image, ?string $hint = null): FoodAnalysisResult;
 
     /**
-     * 實際使用的模型 ID，寫入 food_analyses.model。
+     * 送給 LLM 的完整文字 prompt（系統提示詞＋補充說明），analyze() 送出的就是這段文字；寫入 llm_logs.content。
+     */
+    public function prompt(?string $hint = null): string;
+
+    /**
+     * 實際使用的模型 ID，寫入 llm_logs.model。
      */
     public function model(): string;
 

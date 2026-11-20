@@ -3,7 +3,7 @@
 namespace Fitness\FoodAnalyzer\Drivers;
 
 /**
- * driver 回傳的分析結果：食物項目，以及寫入 food_analyses 的原始回應與 token 用量。
+ * driver 回傳的分析結果：食物項目，以及寫入 llm_logs 的原始回應與 token 用量。
  * 核心模組只認得這個格式，不依賴外部服務的型別。
  */
 class FoodAnalysisResult

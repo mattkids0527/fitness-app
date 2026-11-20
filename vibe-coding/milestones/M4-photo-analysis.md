@@ -35,7 +35,7 @@
 ### T2 `food-analyzer` 核心模組（完成）
 建立 `packages/fitness/food-analyzer/`（`Fitness\FoodAnalyzer`），註冊 `composer.json`（含 tests autoload-dev）與 `bootstrap/providers.php`，附模組 README。內容：`FoodImageAnalyzer` 合約與 abstract 基底、`FoodAnalyzerManager`（singleton）、`food_analyzer()` helper；結果 DTO（項目清單：名稱、份量、重量、熱量、四種營養素、信心度）；每種失敗一個 Exception（看不出食物、次數限制、逾時、其他）；`food_analyses` migration、Model、Repository（含 Contract）；分析服務：檢查每日上限（使用者時區切日）→ 呼叫 driver → 寫一筆紀錄（成功或失敗都寫，不含照片）；設定檔 `fitness/food-analyzer.php`（driver、每日上限、逾時）；`FakeFoodAnalyzer` 放在模組 tests。
 **完成條件**：`composer dump-autoload`、migrate 成功；pint 通過；用 tinker 以 Fake driver 跑一次分析，`food_analyses` 有紀錄。
-**實作補充**：`food_analyses` 多一欄 `result`（jsonb，正規化後的項目），T4 確認頁從這裡帶入，`raw_response` 只留外部服務原始回應供除錯；每日上限以 profile 的 `UserCalendar` 切日；另有 `DriverNotAvailableException`（driver 沒綁定或缺金鑰，不算次數）；例外的 `toFlash()` 回傳 `{code, title, message}`。tinker 驗證成功、429、非預期例外、超過上限四種情況。
+**實作補充**：`food_analyses` 多一欄 `result`（jsonb，正規化後的項目），T4 確認頁從這裡帶入；使用者要求另建 `llm-log` 模組與 `llm_logs` 表，記錄每次呼叫的 LLM 種類（例如 `gemini`）、模型、完整 prompt（`content`）、回應、token、耗時，`food_analyses` 以 `llm_log_id` 關聯，driver 合約加 `prompt()`；每日上限 env `FOOD_ANALYZER_DAILY_LIMIT`（預設 20）已寫入 `.env.example`；每日上限以 profile 的 `UserCalendar` 切日；另有 `DriverNotAvailableException`（driver 沒綁定或缺金鑰，不算次數）；例外的 `toFlash()` 回傳 `{code, title, message}`。tinker 驗證成功、429、非預期例外、超過上限四種情況。
 
 ### T3 `food-analyzer-gemini` driver 與模型實測
 建立 `packages/fitness/food-analyzer-gemini/`，安裝 `prism-php/prism`，只綁定 `fitness.food_analyzer.gemini`。圖片以 inline data 送出（不用 Files API），JSON schema 結構化輸出，提示詞要求繁體中文、整份數值、看不出食物時回報；把 429、逾時、schema 不符等轉成 T2 的 Exception；記錄 model、token 用量、耗時。附 README 說明 API 金鑰申請步驟。接著用 5～10 張常見餐點照片比較候選模型（準確度、耗時、token），結果記在本檔，決定 `GEMINI_MODEL`。

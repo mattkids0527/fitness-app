@@ -1,0 +1,20 @@
+{
+    "name": "fitness/llm-log",
+    "description": "LLM API 呼叫紀錄：誰、用哪個 LLM、送出的 prompt、回應、token 用量與耗時",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.2",
+        "laravel/framework": "^12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Fitness\\LlmLog\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Fitness\\LlmLog\\Tests\\": "tests/"
+        }
+    }
+}

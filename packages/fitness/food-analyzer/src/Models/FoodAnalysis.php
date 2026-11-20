@@ -4,11 +4,13 @@ namespace Fitness\FoodAnalyzer\Models;
 
 use App\Models\User;
 use Fitness\FoodAnalyzer\Drivers\FoodItem;
+use Fitness\LlmLog\Models\LlmLog;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * 一次照片分析的紀錄（成功或失敗都有），不含照片；result 為正規化後的食物項目，供確認頁帶入。
+ * 呼叫 LLM 的細節在關聯的 llmLog。
  */
 class FoodAnalysis extends Model
 {
@@ -24,16 +26,11 @@ class FoodAnalysis extends Model
 
     protected $fillable = [
         'user_id',
-        'provider',
-        'model',
+        'llm_log_id',
         'status',
         'error',
         'hint',
         'result',
-        'raw_response',
-        'input_tokens',
-        'output_tokens',
-        'duration_ms',
     ];
 
     /**
@@ -56,10 +53,6 @@ class FoodAnalysis extends Model
     {
         return [
             'result' => 'array',
-            'raw_response' => 'json',
-            'input_tokens' => 'integer',
-            'output_tokens' => 'integer',
-            'duration_ms' => 'integer',
         ];
     }
 
@@ -93,5 +86,13 @@ class FoodAnalysis extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * 這次分析呼叫 LLM 的紀錄（provider、model、prompt、回應、token、耗時）。
+     */
+    public function llmLog(): BelongsTo
+    {
+        return $this->belongsTo(LlmLog::class);
     }
 }

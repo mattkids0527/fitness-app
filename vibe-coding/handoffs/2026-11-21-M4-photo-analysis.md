@@ -28,8 +28,10 @@
 ## T2 完成內容（2026-11-21）
 
 - `packages/fitness/food-analyzer/`：`FoodImageAnalyzer` 合約與基底、`FoodAnalyzerManager`、`food_analyzer()`、`FoodImage`／`FoodItem`／`FoodAnalysisResult`、6 個 Exception、`food_analyses`、`FoodAnalysisService`（`analyze()`、`remainingToday()`）、`FakeFoodAnalyzer` 與 `FakesFoodAnalyzer` trait。細節見模組 README。
-- 跟規格不同：`food_analyses` 多 `result` 欄（正規化項目，T4 從這裡帶入）；依賴 profile 的 `UserCalendar`。
-- driver 要做的事：實作 `analyze()`，把 429／逾時／schema 不符轉成 `ProviderRateLimitedException`／`AnalysisTimeoutException`／`AnalysisFailedException`，看不出食物丟 `NoFoodDetectedException`（或回傳 0 個項目），已拿到回應時以 `withResponse()` 附上 token 用量。
+- 使用者追加：新增 `packages/fitness/llm-log/`（`llm_logs` 表），每次呼叫 LLM 記錄使用者、LLM 種類（provider，例如 `gemini`）、模型、用途（`feature`）、完整 prompt（`content`）、回應、token、耗時；`food_analyses` 只留分析結果並以 `llm_log_id` 關聯，兩筆在同一個交易寫入。
+- 跟規格不同（已同步規格）：`food_analyses` 多 `result` 欄（正規化項目，T4 從這裡帶入）；依賴 profile 的 `UserCalendar`。
+- 每日上限：`config('fitness.food_analyzer.daily_limit')` ← env `FOOD_ANALYZER_DAILY_LIMIT`（預設 20），`.env.example` 已加 `FOOD_ANALYZER_*`。T7 記得把這些與 `GEMINI_*` 加進 `PRODUCTION_ENV`，並在 CLAUDE.md 補上 `llm-log` 模組。
+- driver 要做的事：實作 `prompt()`（回傳送出的完整文字 prompt，`analyze()` 要送同一段）與 `analyze()`，把 429／逾時／schema 不符轉成 `ProviderRateLimitedException`／`AnalysisTimeoutException`／`AnalysisFailedException`，看不出食物丟 `NoFoodDetectedException`（或回傳 0 個項目），已拿到回應時以 `withResponse()` 附上 token 用量。
 - 測試（T6）尚未寫；本地 tinker 驗證過。
 
 ## 這次 session 的其他變更

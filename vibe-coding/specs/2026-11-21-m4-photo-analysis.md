@@ -52,7 +52,8 @@
 
 | 模組 | 職責 | 依賴 |
 |---|---|---|
-| `food-analyzer`（核心） | `FoodImageAnalyzer` 合約、abstract 基底、Manager、`food_analyzer()` helper、結果 DTO、每種失敗一個 Exception、`food_analyses` 紀錄、每日上限 | profile（`UserCalendar` 切日） |
+| `llm-log` | `llm_logs` 表：使用者與 LLM API 的呼叫紀錄（LLM 種類、模型、prompt、回應、token、耗時） | — |
+| `food-analyzer`（核心） | `FoodImageAnalyzer` 合約、abstract 基底、Manager、`food_analyzer()` helper、結果 DTO、每種失敗一個 Exception、`food_analyses` 紀錄、每日上限 | profile（`UserCalendar` 切日）、llm-log |
 | `food-analyzer-gemini`（driver） | 以 Prism 呼叫 Gemini：圖片以 inline data 隨請求送出（**不用** Files API，避免檔案留在 Google 端 48 小時），JSON schema 結構化輸出；只綁定 `fitness.food_analyzer.gemini` | food-analyzer |
 | `meal`（擴充） | 分析路由與頁面、確認後建立餐點（`source`、`food_analysis_id`、項目 `confidence`） | food-analyzer、profile |
 
@@ -67,16 +68,30 @@
 | 欄位 | 型別 | 說明 |
 |---|---|---|
 | user_id | FK users，cascade | 計算每日用量 |
-| provider | varchar(32) | 例如 `gemini` |
-| model | varchar(64) | 實際使用的模型 ID |
+| llm_log_id | FK llm_logs，可 null，null on delete | 這次分析呼叫 LLM 的紀錄 |
 | status | varchar(16) | `succeeded`／`failed` |
 | error | varchar(32)，可 null | 失敗種類（§3.1） |
 | hint | varchar(200)，可 null | 使用者的補充說明 |
-| result | jsonb，可 null | 正規化後的食物項目（欄位同 `meal_items`＋confidence），確認頁從這裡帶入（T2 實作時新增） |
-| raw_response | jsonb，可 null | Gemini 回傳的文字結果（不含照片） |
+| result | jsonb，可 null | 正規化後的食物項目（欄位同 `meal_items`＋confidence），確認頁從這裡帶入 |
+| created_at | timestampTz | 每日上限以使用者時區切日計算 |
+
+### 5.1.1 `llm_logs`（llm-log 模組，新表，2026-11-21 使用者要求）
+
+使用者與 LLM API 的呼叫紀錄，每呼叫一次寫一筆（成功或失敗），之後其他功能用 LLM 也記在這裡。原本放在 `food_analyses` 的 provider、model、原始回應、token、耗時移到這裡。
+
+| 欄位 | 型別 | 說明 |
+|---|---|---|
+| user_id | FK users，cascade | 呼叫的使用者 |
+| provider | varchar(32) | LLM 種類，例如 `gemini` |
+| model | varchar(64) | 實際使用的模型 ID |
+| feature | varchar(32) | 用途，照片分析為 `food_analysis` |
+| content | text | 送出的完整 prompt（系統提示詞＋補充說明），不含照片 |
+| response | jsonb，可 null | LLM 回傳的結果 |
+| status | varchar(16) | `succeeded`／`failed` |
+| error | varchar(32)，可 null | 失敗種類（§3.1） |
 | input_tokens、output_tokens | integer，可 null | 估算成本 |
 | duration_ms | integer | 呼叫耗時 |
-| created_at | timestampTz | 每日上限以使用者時區切日計算 |
+| created_at | timestampTz | |
 
 ### 5.2 `meals`（新增欄位）
 
@@ -112,3 +127,4 @@ migration 都是新增可 null 欄位或新表，相容舊版程式（`coding-st
 | 2026-11-21 | Gemini 先用免費層 |
 | 2026-11-21 | 補充說明、信心度、每次送出都算一次，依建議做 |
 | 2026-11-21 | demo 確認：＋選單兩格直接進入；看不出食物時主按鈕為「重拍／換一張」；信心度三格訊號（高 ≥ 0.75、中 ≥ 0.5、低 < 0.5）；飲食頁照片分析建立的餐點標「照片」 |
+| 2026-11-21 | 新增獨立的 `llm_logs` 表（`llm-log` 模組）記錄使用者呼叫的 LLM 種類與完整 prompt（`content`）；`food_analyses` 以 `llm_log_id` 關聯。`food_analyses` 另加 `result` 存正規化項目 |
