@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-TW">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>M3 飲食紀錄＋喝水 demo</title>
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+        <!-- demo 工具列：切換畫面、資料情境、裝置與主題，不屬於產品畫面 -->
+        <header class="toolbar">
+            <h1>M3 飲食紀錄＋喝水 demo</h1>
+            <div class="group" id="tb-screens"></div>
+            <div class="group" id="tb-scenarios">
+                <span class="group-label">資料</span>
+                <button data-scenario="normal">一般</button>
+                <button data-scenario="empty">今天空白</button>
+                <button data-scenario="over">超標＋缺營養素</button>
+            </div>
+            <div class="group">
+                <span class="group-label">裝置</span>
+                <button data-viewport="mobile">手機</button>
+                <button data-viewport="desktop">桌機</button>
+            </div>
+            <div class="group">
+                <span class="group-label">主題</span>
+                <button data-theme-btn="light">淺色</button>
+                <button data-theme-btn="dark">深色</button>
+            </div>
+        </header>
+
+        <main class="stage">
+            <div class="device mobile" id="device"><div class="app" id="app"></div></div>
+        </main>
+
+        <section class="notes">
+            <h2>說明</h2>
+            <ul>
+                <li>demo 的「現在」固定為 2026-11-20（五）12:40；熱量目標 1,678 kcal、蛋白質目標 141 g、體重 78.5 kg，沿用 M1 demo 的範例使用者。</li>
+                <li>今日頁的熱量卡沿用 M1 的環形圖，已攝取熱量與蛋白質改為實際加總；超過目標時環形圖變紅並顯示「超過 N kcal」。碳水、脂肪、纖維的目標與達成率留給 M6。</li>
+                <li>餐別依時間預設：5–10 點早餐、10–14 點午餐、17–21 點晚餐，其餘點心；手動選過餐別後，改時間不再自動切換。</li>
+                <li>食物項目只有名稱、熱量必填；營養素留空表示「不知道」，加總時當 0，並提示「部分項目沒有填營養素」（纖維不列入提示）。</li>
+                <li>快速帶入：常用食物、最近吃過（近 30 天、20 筆）點選後選份數 ×0.5／×1／×1.5／×2；複製整餐（近 14 天）直接加入該餐所有項目。</li>
+                <li>項目旁的 ☆ 把項目加入常用食物（同名不能重複）；熱量沒填但有蛋白質／碳水／脂肪時，出現「依營養素估算」按鈕。</li>
+                <li>「再吃一次」開新增頁，日期為今天、餐別沿用，內容預填，按儲存才建立。</li>
+                <li>喝水只能記今天；今日頁 +250／+500 直接記錄並顯示 toast，按錯從喝水面板刪除。建議量 = 體重 × 35 ml，四捨五入到 50 ml。</li>
+                <li>「我的」「記錄體重」是 M1 已完成的畫面，demo 中略過；健身維持即將推出。</li>
+            </ul>
+        </section>
+
+        <script src="app.js"></script>
+    </body>
+</html>

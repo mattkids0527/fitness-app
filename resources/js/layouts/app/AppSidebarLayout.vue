@@ -7,6 +7,7 @@ import AppSidebarHeader from '@/components/AppSidebarHeader.vue';
 import AppToast from '@/components/AppToast.vue';
 import WeightLogSheet from '@/components/profile/WeightLogSheet.vue';
 import QuickAddDialog from '@/components/QuickAddDialog.vue';
+import WaterSheet from '@/components/water/WaterSheet.vue';
 import type { BreadcrumbItemType } from '@/types';
 
 interface Props {
@@ -28,6 +29,7 @@ withDefaults(defineProps<Props>(), {
         <AppBottomNav />
         <QuickAddDialog />
         <WeightLogSheet />
+        <WaterSheet />
         <AppToast />
     </AppShell>
 </template>

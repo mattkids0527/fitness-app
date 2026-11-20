@@ -13,15 +13,9 @@ Route::get('/', function () {
 })->name('home');
 
 /*
-| 底部 Tab 尚未實作的功能先顯示「即將推出」；飲食（meal）、健身（exercise）模組建立後移除這兩條路由。
+| 底部 Tab 尚未實作的功能先顯示「即將推出」；健身（exercise）模組建立後移除這條路由。
 */
 Route::middleware(['auth', 'verified'])->name('coming_soon.')->group(function () {
-    Route::get('meals', fn () => Inertia::render('ComingSoon', [
-        'title' => '飲食',
-        'icon' => 'utensils',
-        'items' => ['拍照交給 AI 分析熱量與營養素', '手動輸入餐點', '常用食物、最近吃過快速帶入'],
-    ]))->name('meals');
-
     Route::get('workouts', fn () => Inertia::render('ComingSoon', [
         'title' => '健身',
         'icon' => 'dumbbell',

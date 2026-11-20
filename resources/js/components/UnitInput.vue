@@ -6,7 +6,7 @@ withDefaults(
     defineProps<{
         id?: string;
         unit?: string;
-        type?: 'number' | 'date';
+        type?: 'number' | 'date' | 'time';
         placeholder?: string;
         step?: string;
         min?: string;

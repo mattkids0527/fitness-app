@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 專案概述
 
-以 Laravel 12 官方 Vue Starter Kit 為基礎建立的手機優先飲食／健身紀錄應用（M1 帳號基礎已完成：首次設定、BMR／每日目標、體重紀錄、今日頁、底部 Tab 版型、PWA；M2 Google 登入已完成：設定頁綁定／解除 Google、以已綁定的 Google 帳號登入）。技術堆疊：Laravel 12 + Inertia.js 2 + Vue 3（TypeScript）+ Tailwind CSS 3 + shadcn-vue（radix-vue）+ Ziggy。資料庫為 PostgreSQL 16（以 `docker-compose.yml` 在本地起容器，對外 port 54329；開發庫 `fitness_app`、測試庫 `fitness_app_testing`）。語系 `zh_TW`（框架內建訊息在 `lang/zh_TW/`），時區 `Asia/Taipei`。
+以 Laravel 12 官方 Vue Starter Kit 為基礎建立的手機優先飲食／健身紀錄應用（M1 帳號基礎已完成：首次設定、BMR／每日目標、體重紀錄、今日頁、底部 Tab 版型、PWA；M2 Google 登入已完成：設定頁綁定／解除 Google、以已綁定的 Google 帳號登入；D1 部署已完成：正式站 https://wn52777.com，GCP e2-micro + Cloudflare Tunnel，GitHub Actions 手動部署）。技術堆疊：Laravel 12 + Inertia.js 2 + Vue 3（TypeScript）+ Tailwind CSS 3 + shadcn-vue（radix-vue）+ Ziggy。資料庫為 PostgreSQL 16（以 `docker-compose.yml` 在本地起容器，對外 port 54329；開發庫 `fitness_app`、測試庫 `fitness_app_testing`）。語系 `zh_TW`（框架內建訊息在 `lang/zh_TW/`），時區 `Asia/Taipei`。
 
 ## 常用指令
 
@@ -32,6 +32,11 @@ php artisan user:create --name="王小明" --email=ming@example.com --generate-p
 php artisan user:password ming@example.com --generate-password
 php artisan db:seed          # 本地開發帳號（只在 APP_ENV=local；帳密讀 .env 的 DEV_ACCOUNT_*，已完成首次設定，可重複執行）
 
+# 部署（正式部署用 GitHub Actions：Actions → deploy → Run workflow，分支 main；以下為本地除錯用）
+npm run build && DEPLOY_HOST=<VM 外部 IP> vendor/bin/dep deploy   # DEPLOY_HOST 格式 [帳號@]IP[:路徑]
+DEPLOY_HOST=<VM 外部 IP> vendor/bin/dep rollback                   # 只退程式碼，不退資料庫
+DEPLOY_HOST=<VM 外部 IP> vendor/bin/dep releases
+
 # 測試（PHPUnit；使用 PostgreSQL 的 fitness_app_testing，需先 docker compose up -d）
 ./vendor/bin/phpunit
 ./vendor/bin/phpunit packages/fitness/profile/tests            # 單一模組
@@ -41,7 +46,7 @@ php artisan db:seed          # 本地開發帳號（只在 APP_ENV=local；帳�
 
 注意：`tests/Pest.php` 存在，但 composer 並未安裝 Pest，現有測試皆為 PHPUnit class 寫法；新增測試請沿用 PHPUnit 風格（或先安裝 Pest）。
 
-CI（`.github/workflows/`）在 push/PR 到 `main`、`develop` 時執行：Pint + Prettier + ESLint，以及 `npm run build` 後跑 PHPUnit（PHP 8.4、Node 22，PostgreSQL 16 以 service container 提供，同樣對應 port 54329）。Feature 測試會渲染 Inertia 頁面，需要已建置的 Vite manifest，本地若測試因 manifest 缺失失敗，先跑 `npm run build`。`assertInertia()` 會檢查頁面檔存在，路徑設定在 `config/inertia.php`（`resources/js/pages`，小寫）。測試情境紀錄在 `vibe-coding/tests/`。
+CI（`.github/workflows/`）在 push/PR 到 `main`、`develop` 時執行：`lint.yml`（job `quality`：`pint --test`、`prettier --check`、`eslint .`，只檢查不修改）與 `tests.yml`（job `ci`：`npm run build` 後跑 PHPUnit；PHP 8.4、Node 22，PostgreSQL 16 以 service container 提供，同樣對應 port 54329）。`main` 有分支保護：必須透過 PR，`quality`、`ci` 通過才能合併。CD 是 `deploy.yml`，只能手動觸發且只部署 `main`。Feature 測試會渲染 Inertia 頁面，需要已建置的 Vite manifest，本地若測試因 manifest 缺失失敗，先跑 `npm run build`。`assertInertia()` 會檢查頁面檔存在，路徑設定在 `config/inertia.php`（`resources/js/pages`，小寫）。測試情境紀錄在 `vibe-coding/tests/`。
 
 測試庫 `fitness_app_testing` 由 `docker/postgres/init/` 的 SQL 在容器**第一次初始化**時建立；若 volume 早於此腳本存在，需 `docker compose down -v` 重建，或手動 `CREATE DATABASE fitness_app_testing`。
 
@@ -49,7 +54,7 @@ CI（`.github/workflows/`）在 push/PR 到 `main`、`develop` 時執行：Pint 
 
 ### 後端 → 前端：Inertia
 - 沒有獨立 API；controller / route closure 透過 `Inertia::render('路徑/Page', $props)` 回傳頁面，元件名稱對應 `resources/js/pages/{name}.vue`（解析邏輯在 `resources/js/app.ts`）。
-- 路由分檔：`routes/web.php`（入口：`/` 未登入導向登入、已登入導向今日頁 `/today`；暫放 `/meals`、`/workouts` 的「即將推出」頁，飲食／健身模組完成後移除）、`routes/auth.php`（登入/註冊/密碼重設/信箱驗證）、`routes/settings.php`（帳號資料、密碼、外觀設定）。業務路由在各模組的 `src/routes/web.php`。
+- 路由分檔：`routes/web.php`（入口：`/` 未登入導向登入、已登入導向今日頁 `/today`；暫放 `/workouts` 的「即將推出」頁，健身模組完成後移除）、`routes/auth.php`（登入/註冊/密碼重設/信箱驗證）、`routes/settings.php`（帳號資料、密碼、外觀設定）。業務路由在各模組的 `src/routes/web.php`。
 - 註冊預設關閉：`config('auth.registration_enabled')`（`AUTH_REGISTRATION_ENABLED`）為 false 時不註冊 `register` 路由；`config('auth.password_reset_enabled')`（`AUTH_PASSWORD_RESET_ENABLED`）控制登入頁是否顯示「忘記密碼」。登入後首頁是 `fitness.daily_summary.show`（starter kit 原本的 `dashboard` 已移除）。
 - 全域共享 props 定義在 `app/Http/Middleware/HandleInertiaRequests.php::share()`（`name`、`quote`、`auth.user`、`flash`），對應的 TS 型別在 `resources/js/types/index.ts`（`SharedData`、`Flash`、`User`、`BreadcrumbItem`、`NavItem`）。修改共享資料時兩邊要同步。模組自己的共享資料由模組 Provider 以 `Inertia::share()` 加入（例如 `social_login.providers`，型別在 `types/<module>.ts`），`app/` 不依賴模組。
 - 一次性結果訊息：redirect 時 `->with('success', '文字')` 由 `AppToast` 顯示；`->with('error', ['title' => ..., 'message' => ...])` 由 `components/FlashAlert.vue` 在頁面內顯示（放在需要的頁面，例如登入頁、已連結帳號頁）。
@@ -68,6 +73,16 @@ CI（`.github/workflows/`）在 push/PR 到 `main`、`develop` 時執行：Pint 
 - `components/ui/`：shadcn-vue 產生的元件，每個元件資料夾有 `index.ts` 匯出；`lib/utils.ts` 提供 `cn()`（clsx + tailwind-merge）。
 - `composables/useAppearance.ts`：淺色/深色/系統主題，於 `app.ts` 呼叫 `initializeTheme()`。
 - 前端用 Ziggy 的 `route('name')` 產生網址（`ZiggyVue` 已全域註冊）。
+
+### 部署（正式環境）
+
+完整步驟與疑難排解見 [deploy/README.md](deploy/README.md)，規格見 `vibe-coding/specs/2026-11-20-d1-gcp-deployment.md`。
+- 架構：Cloudflare（`wn52777.com`，HTTPS、`/build/` 邊緣快取）→ Tunnel → GCP e2-micro（1GB RAM）上的 nginx（只聽 127.0.0.1:80）→ PHP 8.4-FPM（以 `deploy` 身分執行）→ PostgreSQL 16。VM 只開 SSH；nginx 對 PHP 固定 `HTTPS=on`，並以 `CF-Connecting-IP` 作為使用者 IP，所以 Laravel 不需要 `trustProxies`。
+- VM 環境由 `deploy/provision.sh` 建立（可重複執行）。CD 只部署程式碼；要改 PHP 擴充、nginx、cron、queue worker 等系統設定時，改這支腳本，再到 VM 重跑。
+- 部署用 Deployer（`deploy.php`，`recipe/laravel.php`，保留 3 個版本）。前端在 runner／本地建置後上傳，VM 不跑 npm。
+- GitHub Environment `production`：`DEPLOY_HOST`（Variable，`[帳號@]IP[:路徑]`）、`DEPLOY_SSH_KEY`、`DEPLOY_HOST_KEY`、`PRODUCTION_ENV`（整份正式環境 `.env`，每次部署覆蓋 VM 的 `shared/.env`，舊版存成 `.env.previous`）。改正式設定要改 `PRODUCTION_ENV` 再部署，不要直接改 VM 的 `.env`。
+- 正式環境 `QUEUE_CONNECTION=sync`、沒有排程；之後有 queue job（M4）要在 `provision.sh` 加 worker。資料庫每天 03:00 備份到 `/var/backups/fitness-app/`（保留 7 份）。
+- migration 要相容新舊版程式（`coding-style.md` §12），因為 `dep rollback` 不會退回資料庫。在 VM 上執行 artisan 一律 `sudo -u deploy php artisan ...`。
 
 ### 程式風格
 - Prettier：4 空白縮排、單引號、行寬 150，含 organize-imports 與 tailwindcss 外掛（自動排序 import 與 class）。

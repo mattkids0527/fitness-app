@@ -1,6 +1,6 @@
 # D1 GCP 部署與 CI/CD
 
-- 狀態：進行中（2026-11-20 開始）
+- 狀態：完成（2026-11-20）。交接見 [handoff](../handoffs/2026-11-20-D1-gcp-deployment.md)
 - 建立日期：2026-11-20
 - 分支：`develop`（2026-11-20 起改為 develop → main 流程，PR 由使用者合併；T1～T4 在 `milestone/D1-gcp-deployment` 完成，已快轉進 develop）
 - 依據規格：[D1 GCP 部署與 CI/CD 規格](../specs/2026-11-20-d1-gcp-deployment.md)
@@ -68,7 +68,7 @@
 主機位址從環境變數讀取，不寫死在 repo。先從本地（WSL）執行 `npm run build && vendor/bin/dep deploy production`，部署到 VM，確認整套流程可用；用 `php artisan user:create` 建立正式環境帳號。
 **完成條件**：從本地部署成功，`https://wn52777.com` 能登入並完成首次設定；`dep rollback production` 可以切回上一版。
 
-### T6 GitHub Actions 部署 workflow
+### T6 GitHub Actions 部署 workflow（完成）
 新增 `.github/workflows/deploy.yml`，依規格 §7：
 - 觸發方式 `workflow_dispatch`，不是 `main` 就直接失敗
 - 使用 Environment `production`，設定 `concurrency: production`
@@ -87,7 +87,7 @@
 GitHub 上的設定由使用者操作。
 **完成條件**：YAML 語法正確（actionlint）；`deploy.php` 的 `DEPLOY_HOST` 解析與 `.env` 上傳在本地容器驗證過；使用者已完成 Environment、Secrets 與分支保護設定。
 
-### T7 第一次正式部署與收尾
+### T7 第一次正式部署與收尾（完成）
 在 Google Cloud 建立正式環境的 OAuth 用戶端（redirect URI `https://wn52777.com/auth/google/callback`，規格 §3.5），憑證填入 VM 的 `shared/.env`。本分支 push 後開 PR，確認新的 CI 正常運作（格式錯誤會讓 CI 失敗）。合併 `main` 後，在 Actions 頁面手動觸發部署，然後照上線檢查清單逐項確認：
 - 登入、首次設定、體重紀錄、今日頁
 - 在設定頁綁定 Google，登出後用 Google 登入
