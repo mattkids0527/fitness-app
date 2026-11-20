@@ -5,6 +5,7 @@
 | 檔案 | 用途 |
 |---|---|
 | `provision.sh` | VM 初始化腳本：在全新的 Ubuntu 上執行一次，安裝並設定整個執行環境，包含資料庫每日備份與 Cloudflare Tunnel |
+| `../deploy.php` | Deployer 部署設定（見 §8） |
 
 ```
 使用者 ──HTTPS──▶ Cloudflare（憑證、快取、DDoS 防護）
@@ -297,6 +298,84 @@ sudo -u postgres bash -c 'f=$(ls -1t /var/backups/fitness-app/*.dump | head -1);
    ```
 
 > 備份檔裡的資料表結構是當時的版本。`--clean` 只會刪除備份檔裡有的資料表，備份之後才新增的資料表會原樣留著。如果備份之後部署過新的 migration，還原後要再執行一次 `php artisan migrate --force`，或是用 `dep rollback` 切回和備份同一個時期的程式。
+
+## 8. 部署（Deployer）
+
+部署設定在根目錄的 `deploy.php`，使用 Deployer 內建的 Laravel 流程：
+
+- 前端在**執行部署的機器**上建置，然後上傳到 VM。
+- VM 只負責 `composer install`、migrate 和快取。
+- 預設部署 `main` 分支。
+
+### 從本地（WSL）部署
+
+**第一次部署前，先用部署金鑰連線一次**，把 VM 的 host key 記到 `~/.ssh/known_hosts`。Deployer 不能回答「是否信任這台主機」的提示：
+
+```bash
+ssh -i ~/.ssh/fitness_deploy deploy@<VM 外部 IP> exit
+```
+
+**部署**：先在要部署的版本上建置前端，再執行 Deployer：
+
+```bash
+npm run build
+```
+
+```bash
+DEPLOY_HOST=<VM 外部 IP> vendor/bin/dep deploy
+```
+
+部署流程依序是：
+
+1. 確認 `public/build/manifest.json` 存在。
+2. 在 VM 建立新的版本目錄，從 GitHub 拉取 `main`。
+3. 連結 `shared/.env`、`shared/storage`。
+4. 執行 `composer install --no-dev`。
+5. 上傳 `public/build/`。
+6. 建立 `storage:link`；執行 `config`、`route`、`view`、`event` 的快取，以及 `migrate --force`。
+7. 把 `current` 切換到新版本，reload php-fpm。
+8. 刪除超過 3 個的舊版本。
+
+任何一步失敗都不會切換 `current`，網站維持舊版本。
+
+> 前端是用你本地的程式碼建置的。如果本地所在的分支和 `main` 的前端程式不同，網站會出現不一致的畫面。正式部署請在 GitHub Actions 上執行（T6），那裡會先 checkout `main` 再建置。
+
+**退回上一版**
+
+```bash
+DEPLOY_HOST=<VM 外部 IP> vendor/bin/dep rollback
+```
+
+`rollback` 只會切換程式碼，不會退回資料庫（見 `vibe-coding/coding-style.md` §12）。
+
+**其他常用指令**
+
+```bash
+DEPLOY_HOST=<VM 外部 IP> vendor/bin/dep releases
+```
+
+```bash
+DEPLOY_HOST=<VM 外部 IP> vendor/bin/dep ssh
+```
+
+- `releases`：列出 VM 上的版本與部署時間。
+- `ssh`：以 `deploy` 帳號連進 VM，並切換到 `current` 目錄。
+
+**部署被鎖住**：上一次部署中途被中斷時會出現 `Deploy locked`，確認沒有其他部署正在執行後解除：
+
+```bash
+DEPLOY_HOST=<VM 外部 IP> vendor/bin/dep deploy:unlock
+```
+
+### 建立正式環境帳號
+
+第一版不開放註冊，帳號用指令建立。第一次部署完成後執行：
+
+```bash
+ssh -t -i ~/.ssh/fitness_deploy deploy@<VM 外部 IP> "cd /var/www/fitness-app/current && php artisan user:create --generate-password"
+```
+
+指令會互動詢問姓名和 email，最後印出產生的密碼，請自行妥善保存。忘記密碼時，可以改用 `php artisan user:password <email> --generate-password` 重設。
 
 ## 疑難排解
 
