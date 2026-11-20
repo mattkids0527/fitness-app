@@ -1,0 +1,23 @@
+{
+    "name": "fitness/food-analyzer",
+    "description": "食物照片分析核心：driver 合約與 Manager、結果 DTO、food_analyses 紀錄、每日上限",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.2",
+        "laravel/framework": "^12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Fitness\\FoodAnalyzer\\": "src/"
+        },
+        "files": [
+            "src/helpers.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Fitness\\FoodAnalyzer\\Tests\\": "tests/"
+        }
+    }
+}

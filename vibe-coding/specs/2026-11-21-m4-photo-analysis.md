@@ -52,7 +52,7 @@
 
 | 模組 | 職責 | 依賴 |
 |---|---|---|
-| `food-analyzer`（核心） | `FoodImageAnalyzer` 合約、abstract 基底、Manager、`food_analyzer()` helper、結果 DTO、每種失敗一個 Exception、`food_analyses` 紀錄、每日上限 | — |
+| `food-analyzer`（核心） | `FoodImageAnalyzer` 合約、abstract 基底、Manager、`food_analyzer()` helper、結果 DTO、每種失敗一個 Exception、`food_analyses` 紀錄、每日上限 | profile（`UserCalendar` 切日） |
 | `food-analyzer-gemini`（driver） | 以 Prism 呼叫 Gemini：圖片以 inline data 隨請求送出（**不用** Files API，避免檔案留在 Google 端 48 小時），JSON schema 結構化輸出；只綁定 `fitness.food_analyzer.gemini` | food-analyzer |
 | `meal`（擴充） | 分析路由與頁面、確認後建立餐點（`source`、`food_analysis_id`、項目 `confidence`） | food-analyzer、profile |
 
@@ -72,6 +72,7 @@
 | status | varchar(16) | `succeeded`／`failed` |
 | error | varchar(32)，可 null | 失敗種類（§3.1） |
 | hint | varchar(200)，可 null | 使用者的補充說明 |
+| result | jsonb，可 null | 正規化後的食物項目（欄位同 `meal_items`＋confidence），確認頁從這裡帶入（T2 實作時新增） |
 | raw_response | jsonb，可 null | Gemini 回傳的文字結果（不含照片） |
 | input_tokens、output_tokens | integer，可 null | 估算成本 |
 | duration_ms | integer | 呼叫耗時 |

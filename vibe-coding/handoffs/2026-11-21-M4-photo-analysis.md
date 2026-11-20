@@ -5,13 +5,13 @@
 - 依據規格：[M4 規格](../specs/2026-11-21-m4-photo-analysis.md)
 - 設計定稿：[ui/features/m4-photo-analysis](../ui/features/m4-photo-analysis/README.md)
 - 分支：`develop`
-- 目前進度：規格定稿、demo 確認（T1 完成）、milestone Task 拆分已確認。**還沒寫任何程式**，下一步是 T2。
+- 目前進度：T1 demo、T2 `food-analyzer` 核心模組完成。下一步是 T3（Gemini driver 與模型實測，需要使用者的 API 金鑰與測試照片）。
 
 ## 下次接手從這裡開始
 
 1. `git checkout develop && git pull --ff-only`。
-2. 先讀規格 §2（已決 Q1～Q10）與 §3～§6，再讀 milestone 的 T2。寫程式前依 CLAUDE.md 讀 `vibe-coding/coding-style.md`；Driver 模式可參考 `social-login`／`social-login-google`（Manager、helper、`FakeSocialProvider`）。
-3. T2 開始前跟使用者確認一次再動手；每個 Task 完成就 commit 並 push，再詢問是否進行下一個 Task。
+2. 先讀規格 §2（已決 Q1～Q10）與 §3～§6，再讀 milestone 的 T3。寫程式前依 CLAUDE.md 讀 `vibe-coding/coding-style.md`；driver 寫法參考 `social-login-google`，核心合約見 `packages/fitness/food-analyzer/README.md`。
+3. 每個 Task 完成就 commit 並 push，再詢問是否進行下一個 Task。
 4. T3 需要使用者：到 Google AI Studio 申請 `GEMINI_API_KEY` 填進本地 `.env`，並準備 5～10 張真實餐點照片做模型實測。可以在 T2 進行時先請使用者準備。
 5. `develop` 上還有一個沒部署的小改動：未綁定 Google 登入的錯誤說明加上「還沒有帳號的話，請聯絡管理員。」（見 [D2 handoff](2026-11-21-D2-release-versioning.md)）。如果使用者在 M4 完成前想先上線，以 `v1.3.4` 部署；否則跟著 M4 一起以 `v1.4.0` 上線。
 
@@ -24,6 +24,13 @@
 - **確認前不建立餐點**：`meals.status` 不加新狀態。分析成功導向 `GET /meals/create?analysis={id}`，由伺服器讀回 `food_analyses` 的結果帶入表單；同一筆分析只能建立一次餐點。
 - **每日 20 次**：每送出一次給 Gemini 就算一次（含失敗、重新分析）；超過上限不呼叫 Gemini。
 - **demo 定案細節**：看不出食物時主按鈕為「重拍／換一張」；信心度三格訊號（高 ≥ 0.75、中 ≥ 0.5、低 < 0.5），「低」用橘色並在展開時提醒；飲食頁由照片建立的餐點標「照片」。
+
+## T2 完成內容（2026-11-21）
+
+- `packages/fitness/food-analyzer/`：`FoodImageAnalyzer` 合約與基底、`FoodAnalyzerManager`、`food_analyzer()`、`FoodImage`／`FoodItem`／`FoodAnalysisResult`、6 個 Exception、`food_analyses`、`FoodAnalysisService`（`analyze()`、`remainingToday()`）、`FakeFoodAnalyzer` 與 `FakesFoodAnalyzer` trait。細節見模組 README。
+- 跟規格不同：`food_analyses` 多 `result` 欄（正規化項目，T4 從這裡帶入）；依賴 profile 的 `UserCalendar`。
+- driver 要做的事：實作 `analyze()`，把 429／逾時／schema 不符轉成 `ProviderRateLimitedException`／`AnalysisTimeoutException`／`AnalysisFailedException`，看不出食物丟 `NoFoodDetectedException`（或回傳 0 個項目），已拿到回應時以 `withResponse()` 附上 token 用量。
+- 測試（T6）尚未寫；本地 tinker 驗證過。
 
 ## 這次 session 的其他變更
 

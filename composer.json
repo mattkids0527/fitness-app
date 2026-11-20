@@ -32,6 +32,7 @@
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/",
             "Fitness\\DailySummary\\": "packages/fitness/daily-summary/src/",
+            "Fitness\\FoodAnalyzer\\": "packages/fitness/food-analyzer/src/",
             "Fitness\\Meal\\": "packages/fitness/meal/src/",
             "Fitness\\Profile\\": "packages/fitness/profile/src/",
             "Fitness\\SocialLogin\\": "packages/fitness/social-login/src/",
@@ -39,6 +40,7 @@
             "Fitness\\Water\\": "packages/fitness/water/src/"
         },
         "files": [
+            "packages/fitness/food-analyzer/src/helpers.php",
             "packages/fitness/social-login/src/helpers.php"
         ]
     },
@@ -46,6 +48,7 @@
         "psr-4": {
             "Tests\\": "tests/",
             "Fitness\\DailySummary\\Tests\\": "packages/fitness/daily-summary/tests/",
+            "Fitness\\FoodAnalyzer\\Tests\\": "packages/fitness/food-analyzer/tests/",
             "Fitness\\Meal\\Tests\\": "packages/fitness/meal/tests/",
             "Fitness\\Profile\\Tests\\": "packages/fitness/profile/tests/",
             "Fitness\\SocialLogin\\Tests\\": "packages/fitness/social-login/tests/",
