@@ -1,6 +1,6 @@
 # M4 Gemini 照片分析
 
-- 狀態：進行中（2026-11-21 T6 完成；下一步 T7。交接見 [handoff](../handoffs/2026-11-21-M4-photo-analysis.md)）
+- 狀態：進行中（2026-11-21 T7 文件已更新，等使用者設定 `PRODUCTION_ENV`、合併 PR、部署 `v1.4.0` 與驗收。交接見 [handoff](../handoffs/2026-11-21-M4-photo-analysis.md)）
 - 建立日期：2026-11-21
 - 分支：`develop`（每個 Task 完成就 commit 並 push；PR `develop` → `main` 由使用者開與合併）
 - 依據規格：[M4 照片分析規格](../specs/2026-11-21-m4-photo-analysis.md)
@@ -89,4 +89,4 @@ migration：`meals.food_analysis_id`（可 null，null on delete）、`meal_item
 | T4 meal 模組後端 | 完成（2026-11-21） |
 | T5 前端實作 | 完成（2026-11-21） |
 | T6 測試 | 完成（2026-11-21） |
-| T7 部署 v1.4.0 與驗收 | 未開始 |
+| T7 部署 v1.4.0 與驗收 | 進行中（文件完成，等部署與驗收） |

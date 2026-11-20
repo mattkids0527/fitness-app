@@ -5,7 +5,7 @@
 - 依據規格：[M4 規格](../specs/2026-11-21-m4-photo-analysis.md)
 - 設計定稿：[ui/features/m4-photo-analysis](../ui/features/m4-photo-analysis/README.md)
 - 分支：`develop`
-- 目前進度：T1 demo、T2 `food-analyzer` 核心、T3 Gemini driver 與模型實測、T4 meal 模組後端、T5 前端、T6 測試完成。下一步是 T7（文件、`PRODUCTION_ENV`、部署 `v1.4.0` 與正式站驗收）。
+- 目前進度：T1 demo、T2 `food-analyzer` 核心、T3 Gemini driver 與模型實測、T4 meal 模組後端、T5 前端、T6 測試完成；T7 文件（`CLAUDE.md`、`deploy/README.md`）已更新。剩下使用者設定 `PRODUCTION_ENV`、開 PR 合併、以 `v1.4.0` 部署，接著正式站驗收，驗收後寫完 handoff、milestone 標完成。
 
 ## 下次接手從這裡開始
 
@@ -76,7 +76,7 @@
 - 全部 PHPUnit 159 個通過，`pint --test` 通過。沒有改到正式程式碼。
 - 注意：Gemini 回應不是 JSON 時，Prism 先丟解碼錯誤，driver 轉成「分析失敗」但 `llm_logs` 沒有原始文字（只有錯誤訊息）。之後若要除錯這種情況，可在 driver 另外接 `PrismStructuredDecodingException`。
 
-## T7 要做的事
+## T7 要做的事（文件部分已完成，2026-11-21）
 
 - `CLAUDE.md`：專案概述加 M4、模組清單加 `llm-log`、`food-analyzer`、`food-analyzer-gemini`，`.env` 項目（`GEMINI_*`、`FOOD_ANALYZER_*`）。
 - `deploy/README.md`：Gemini 設定與金鑰申請連結（模組 README）。
