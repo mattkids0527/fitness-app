@@ -3,6 +3,7 @@
 namespace Fitness\Exercise\Models;
 
 use App\Models\User;
+use Fitness\Exercise\Enums\RecordType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -62,6 +63,14 @@ class Exercise extends Model
     public function isArchived(): bool
     {
         return $this->archived_at !== null;
+    }
+
+    /**
+     * 記錄方式：沿用所屬分類；沒有分類（只有封存項目會發生）時，以有沒有每下秒數判斷（逐組項目一定有，填時長項目一定沒有）。
+     */
+    public function recordType(): RecordType
+    {
+        return $this->category?->record_type ?? ($this->sec_per_rep !== null ? RecordType::Sets : RecordType::Duration);
     }
 
     /*

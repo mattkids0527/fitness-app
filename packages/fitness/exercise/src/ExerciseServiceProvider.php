@@ -8,12 +8,12 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 /**
- * exercise 模組的進入點，於 bootstrap/providers.php 註冊後掛載設定、容器綁定、語系、migration 與事件。
+ * exercise 模組的進入點，於 bootstrap/providers.php 註冊後掛載設定、容器綁定、語系、migration、路由與事件。
  */
 class ExerciseServiceProvider extends ServiceProvider
 {
     /**
-     * 掛載模組的設定、容器綁定、語系、migration 與事件。
+     * 掛載模組的設定、容器綁定、語系、migration、路由與事件。
      */
     public function boot(): void
     {
@@ -22,6 +22,7 @@ class ExerciseServiceProvider extends ServiceProvider
         $this->registerSingletons();
         $this->setupLang();
         $this->setupMigrations();
+        $this->setupRoutes();
         $this->setupEvents();
     }
 
@@ -67,6 +68,14 @@ class ExerciseServiceProvider extends ServiceProvider
     protected function setupMigrations(): void
     {
         $this->loadMigrationsFrom(__DIR__.'/Database/migrations');
+    }
+
+    /**
+     * 載入模組路由。
+     */
+    protected function setupRoutes(): void
+    {
+        $this->loadRoutesFrom(__DIR__.'/routes/web.php');
     }
 
     /**

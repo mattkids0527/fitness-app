@@ -706,7 +706,7 @@ function logView(s, device) {
 /* ---------- 分類與項目管理 ---------- */
 
 /** 管理頁：分類分組、項目、封存區。 */
-function manageView(s, device) {
+function manageView(s) {
     const head = pageHead('分類與項目', 'nav-workouts', `<button class="btn primary" style="height:40px" data-action="new-ex">${icon('plus', 'sm')}新增項目</button>`);
     const row = (ex, type) => `<button class="ex-row" data-action="edit-ex" data-id="${ex.id}">
             <div class="grow"><div class="nm">${ex.name}</div><div class="sub">${exParams(ex, type)}</div></div>${icon('chevronRight', 'sm')}
@@ -937,7 +937,7 @@ const ownedOf = (c) => data.exercises.find((e) => !e.archived && e.name === c.na
 const catMatch = (c) => data.categories.find((x) => x.name === c.category && x.type === c.type);
 
 /** 辨識結果：候選卡片（最多 3 個）。 */
-function candidatesView(s, device) {
+function candidatesView(s) {
     const sample = SAMPLES[s.idf.sample];
     const head = pageHead('辨識結果', 'back-cand');
     const summary = `<div class="card"><div class="summary">
