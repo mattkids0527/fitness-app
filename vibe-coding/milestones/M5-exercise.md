@@ -1,6 +1,6 @@
 # M5 健身紀錄
 
-- 狀態：進行中（T1 完成）
+- 狀態：進行中（T1、T2 完成）
 - 建立日期：2026-11-21
 - 分支：`develop`（每個 Task 完成就 commit 並 push；PR `develop` → `main` 由使用者開與合併）
 - 依據規格：[M5 健身紀錄規格](../specs/2026-11-21-m5-exercise.md)
@@ -36,9 +36,10 @@
 健身頁、選擇項目面板、記錄頁（填時長、逐組、編輯）、紀錄選單與刪除、分類與項目管理（新增分類、分類選單、刪除限制、項目表單、封存與還原）、照片辨識（辨識頁、辨識中、失敗、次數用完、候選卡、新建分類、帶入表單）、今日頁與喝水面板、桌機版；手機與桌機、淺色與深色。已移到 `vibe-coding/ui/features/m5-exercise/` 並更新 `vibe-coding/ui/index.md`；規格沒寫、隨 demo 定案的做法記在規格 §2.2。
 **完成條件**：使用者確認 demo；features 目錄與 index 已更新。
 
-### T2 `exercise` 模組基礎
+### T2 `exercise` 模組基礎（完成）
 建立 `packages/fitness/exercise/`（`Fitness\Exercise`），註冊 `composer.json`（含 tests autoload-dev）與 `bootstrap/providers.php`，附模組 README。內容：migration（`exercise_categories`、`exercises`、`exercise_logs`、`exercise_sets`，欄位與索引依規格 §4，刪除帳號時 cascade）、Model、Repository（含 Contract）、PHP enum `RecordType`；計算服務：填時長與逐組的消耗熱量、逐組估算時間、訓練量、項目「約消耗」估算（Q10），體重取「紀錄日當天或之前最新一筆」（透過 profile 的 Repository 介面）；預設資料（規格 §5 的 2 個分類、7 個項目）。profile 新增 `ProfileCompleted` 事件（首次設定完成時發出），exercise 以 listener 建立預設資料；既有已完成設定的使用者由 migration 補建一次。設定檔 `fitness/exercise.php`（逐組預設每下秒數、組間休息、MET、最多組數、喝水每小時 ml）。
 **完成條件**：`composer dump-autoload`、migrate 成功；pint 通過；本地開發帳號有預設資料；以 tinker 驗證計算結果與規格範例一致。
+**結果（2026-11-21）**：migrate 與 rollback 重跑皆成功，開發帳號由補建 migration 建立 2 個分類、7 個項目，重跑 `createFor()` 回傳 false 不重複建立；以 tinker 走首次設定確認 listener 建立預設資料、刪除帳號 cascade 清掉紀錄與逐組。計算（70 kg）：室外跑步 30 分 MET 9.0 → 315 kcal；槓鈴臥推 3 組 × 10 下 × 40 kg → 4.5 分、26.3 kcal、訓練量 1,200 kg；12×40、10×50、8×55、10 下徒手 → 6.5 分、37.9 kcal、1,420 kg；喝水 45 分 → 380 ml。pint 通過，PHPUnit 159 個全過。實作補充：profile 的 `WeightLogRepository` 新增 `effectiveOnDate()`（當天或之前最新一筆，之前沒有時取最早一筆，與 demo 一致）；`ProfileCompleted` 在首次設定交易成功後發出；`exercise_logs` 的 Repository 先提供查詢與新增，其餘方法隨 T4 加入。
 
 ### T3 分類與項目管理
 路由與 controller（`/exercises`）、FormRequest、語系。分類：新增（名稱＋記錄方式，同一使用者不重複）、改名、上下移、刪除（還有未封存項目時擋下；只剩封存項目時刪除並把它們的 `category_id` 設為 null）；建立後不能改記錄方式。項目：新增、編輯（只能移到同記錄方式的分類）、刪除（有紀錄改封存、沒紀錄直接刪除）、還原（原分類不存在時放回同記錄方式的第一個分類）；未封存的項目名稱不重複。前端：`pages/exercise/Manage.vue`（分類分組、已封存收合區）、項目表單頁（即時估算）、新增分類面板、分類選單；型別放 `types/exercise.ts`。

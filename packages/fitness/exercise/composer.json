@@ -1,0 +1,20 @@
+{
+    "name": "fitness/exercise",
+    "description": "健身紀錄：分類、項目、逐組／填時長紀錄、消耗熱量與訓練量計算",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.2",
+        "laravel/framework": "^12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Fitness\\Exercise\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Fitness\\Exercise\\Tests\\": "tests/"
+        }
+    }
+}

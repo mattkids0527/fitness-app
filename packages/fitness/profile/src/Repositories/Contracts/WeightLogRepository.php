@@ -21,6 +21,11 @@ interface WeightLogRepository
     public function latestForUser(int $userId): ?WeightLog;
 
     /**
+     * 取得某一天適用的體重：該日（Y-m-d）當天或之前最新一筆；那天之前沒有紀錄時取最早一筆。
+     */
+    public function effectiveOnDate(int $userId, string $date): ?WeightLog;
+
+    /**
      * 取得使用者最新的 N 筆紀錄，新的在前。
      *
      * @return Collection<int, WeightLog>

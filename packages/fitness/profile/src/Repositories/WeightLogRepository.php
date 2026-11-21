@@ -33,6 +33,15 @@ class WeightLogRepository implements WeightLogRepositoryContract
     }
 
     /**
+     * 先找該日當天或之前最新一筆；補記到第一筆體重之前的日期時，退而取最早一筆，讓計算仍有體重可用。
+     */
+    public function effectiveOnDate(int $userId, string $date): ?WeightLog
+    {
+        return $this->newestFirst($userId)->whereDate('measured_on', '<=', $date)->first()
+            ?? WeightLog::where('user_id', $userId)->orderBy('measured_on')->orderBy('id')->first();
+    }
+
+    /**
      * 取得使用者最新的 N 筆紀錄，新的在前。
      */
     public function latestManyForUser(int $userId, int $limit): Collection

@@ -33,6 +33,7 @@
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/",
             "Fitness\\DailySummary\\": "packages/fitness/daily-summary/src/",
+            "Fitness\\Exercise\\": "packages/fitness/exercise/src/",
             "Fitness\\FoodAnalyzer\\": "packages/fitness/food-analyzer/src/",
             "Fitness\\FoodAnalyzerGemini\\": "packages/fitness/food-analyzer-gemini/src/",
             "Fitness\\LlmLog\\": "packages/fitness/llm-log/src/",
@@ -51,6 +52,7 @@
         "psr-4": {
             "Tests\\": "tests/",
             "Fitness\\DailySummary\\Tests\\": "packages/fitness/daily-summary/tests/",
+            "Fitness\\Exercise\\Tests\\": "packages/fitness/exercise/tests/",
             "Fitness\\FoodAnalyzer\\Tests\\": "packages/fitness/food-analyzer/tests/",
             "Fitness\\FoodAnalyzerGemini\\Tests\\": "packages/fitness/food-analyzer-gemini/tests/",
             "Fitness\\LlmLog\\Tests\\": "packages/fitness/llm-log/tests/",
