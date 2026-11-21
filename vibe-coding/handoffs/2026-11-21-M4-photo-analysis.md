@@ -5,9 +5,19 @@
 - 依據規格：[M4 規格](../specs/2026-11-21-m4-photo-analysis.md)
 - 設計定稿：[ui/features/m4-photo-analysis](../ui/features/m4-photo-analysis/README.md)
 - 分支：`develop`
-- 目前進度：T1 demo、T2 `food-analyzer` 核心、T3 Gemini driver 與模型實測、T4 meal 模組後端、T5 前端、T6 測試完成；T7 文件（`CLAUDE.md`、`deploy/README.md`）已更新。剩下使用者設定 `PRODUCTION_ENV`、開 PR 合併、以 `v1.4.0` 部署，接著正式站驗收，驗收後寫完 handoff、milestone 標完成。
+- 目前進度：T1 demo、T2 `food-analyzer` 核心、T3 Gemini driver 與模型實測、T4 meal 模組後端、**M4 完成**（2026-11-21）。T1～T7 全部完成，`main` 已合併（`ec2be98`），正式站以 `v1.4.0` 部署，使用者回報驗收完成。下一個任務尚未決定，見下方「尚未處理」與「之後可以觀察」。
 
-## 下次接手從這裡開始
+## M4 完成後（2026-11-21）
+
+- 版本：`v1.4.0`（tag 在 `main` 的 `ec2be98`）。正式環境 `PRODUCTION_ENV` 已加入 `GEMINI_*`、`FOOD_ANALYZER_*`。
+- 之後可以觀察：
+  - 信心度普遍偏高、「低」很少出現；看 `llm_logs`／`meal_items.confidence` 的分布，必要時調整 `Gemini::prompt()`。
+  - 使用者真實照片的辨識準確度（模型實測只用過 Wikimedia 公開照片）；`gemini-3.8-flash` 不再過載或 `gemini-3.5-flash` 速度穩定時，可以只改 `GEMINI_MODEL` 再比較。
+  - 免費層 429 的頻率；太常出現就考慮在 Google 端開帳單改付費層（不用改程式）。
+- 已知限制：確認頁用瀏覽器上一頁／iOS 滑動返回不會跳出離開詢問；Gemini 回應不是 JSON 時 `llm_logs` 沒有原始文字。
+- 本地 `food_analyses` id 5 仍是未使用的成功分析，可以直接開 `/meals/create?analysis=5` 看確認頁。
+
+## 下次接手從這裡開始（M4 進行中時的紀錄）
 
 1. `git checkout develop && git pull --ff-only`，`composer install`（新增了 `prism-php/prism`）、`php artisan migrate`（M4 新增 3 支 migration）。
 2. 先讀規格 §2（已決 Q1～Q10）與 §3～§6，再讀 milestone 的 T5。前端照 `vibe-coding/ui/features/m4-photo-analysis/` 的 demo 實作（`index.html` 可直接用瀏覽器打開，`app.js` 有各狀態的文案與版面），後端 props 與路由見 `packages/fitness/meal/README.md`「路由」「頁面 props」。寫程式前依 CLAUDE.md 讀 `vibe-coding/coding-style.md`。

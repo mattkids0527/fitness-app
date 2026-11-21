@@ -1,6 +1,6 @@
 # M4 Gemini 照片分析
 
-- 狀態：進行中（2026-11-21 T7 文件已更新，等使用者設定 `PRODUCTION_ENV`、合併 PR、部署 `v1.4.0` 與驗收。交接見 [handoff](../handoffs/2026-11-21-M4-photo-analysis.md)）
+- 狀態：完成（2026-11-21 以 `v1.4.0` 部署。交接見 [handoff](../handoffs/2026-11-21-M4-photo-analysis.md)）
 - 建立日期：2026-11-21
 - 分支：`develop`（每個 Task 完成就 commit 並 push；PR `develop` → `main` 由使用者開與合併）
 - 依據規格：[M4 照片分析規格](../specs/2026-11-21-m4-photo-analysis.md)
@@ -57,9 +57,10 @@ migration：`meals.food_analysis_id`（可 null，null on delete）、`meal_item
 **完成條件**：全部 PHPUnit 通過。
 **實作補充**：情境記錄在 `vibe-coding/tests/2026-11-21-photo-analysis.md`（31 條，使用者 2026-11-21 確認）。`food-analyzer/tests/Feature/FoodAnalysisServiceTest.php`、`tests/Unit/FoodItemTest.php`、`food-analyzer-gemini/tests/Feature/GeminiDriverTest.php`、`meal/tests/Feature/MealAnalysisTest.php`。Gemini driver 以 `Http::fake`／`Http::fakeSequence` 假造 Gemini API 回應（比 Prism fake 更能驗證送出的請求，例如圖片以 inline data 送出），並 `Http::preventStrayRequests()`。發現：回應不是 JSON 時 Prism 先丟解碼錯誤，driver 轉成「分析失敗」但拿不到原始文字，可接受，情境 gm-03 已註明。jsonb 會重排鍵、把 25.0 存成 25，相關比對用 `assertEquals`。全部 PHPUnit 159 個通過。
 
-### T7 部署 `v1.4.0` 與驗收
+### T7 部署 `v1.4.0` 與驗收（完成）
 更新 `CLAUDE.md`（專案概述、模組、`.env` 項目）與 `deploy/README.md`（Gemini 設定）。使用者在 GitHub Secret `PRODUCTION_ENV` 加入 `GEMINI_API_KEY`、`GEMINI_MODEL` 等，合併 PR 後以 `v1.4.0` 部署。正式站驗收：iPhone 拍照與上傳（含拍攝時間帶入）、Android、桌機上傳、失敗重試、次數顯示。寫 handoff，milestone 標為完成。
 **完成條件**：正式站驗收通過。
+**實作補充**：`CLAUDE.md` 補上 M4 模組、照片分析流程與設定，移除「M4 要加 queue worker」的舊說明；`deploy/README.md` 新增「正式環境的照片分析（Gemini）」。使用者更新 `PRODUCTION_ENV`、合併 PR（`develop` → `main`，merge commit `ec2be98`），以 `v1.4.0` 部署，回報已部署並完成驗收（2026-11-21）。
 
 ## 模型實測（T3，2026-11-21）
 
@@ -89,4 +90,4 @@ migration：`meals.food_analysis_id`（可 null，null on delete）、`meal_item
 | T4 meal 模組後端 | 完成（2026-11-21） |
 | T5 前端實作 | 完成（2026-11-21） |
 | T6 測試 | 完成（2026-11-21） |
-| T7 部署 v1.4.0 與驗收 | 進行中（文件完成，等部署與驗收） |
+| T7 部署 v1.4.0 與驗收 | 完成（2026-11-21） |

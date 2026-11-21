@@ -2,6 +2,7 @@
 
 use App\Providers\AppServiceProvider;
 use Fitness\DailySummary\DailySummaryServiceProvider;
+use Fitness\Exercise\ExerciseServiceProvider;
 use Fitness\FoodAnalyzer\FoodAnalyzerServiceProvider;
 use Fitness\FoodAnalyzerGemini\FoodAnalyzerGeminiServiceProvider;
 use Fitness\LlmLog\LlmLogServiceProvider;
@@ -22,4 +23,5 @@ return [
     SocialLoginServiceProvider::class,
     SocialLoginGoogleServiceProvider::class,
     WaterServiceProvider::class,
+    ExerciseServiceProvider::class,
 ];

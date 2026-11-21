@@ -39,7 +39,7 @@
 ### Repository 介面
 
 - `Repositories\Contracts\ProfileRepository`：更新個人資料、標記完成首次設定
-- `Repositories\Contracts\WeightLogRepository`：新增、取最新一筆／最新 N 筆、查詢自己的紀錄、筆數、刪除
+- `Repositories\Contracts\WeightLogRepository`：新增、取最新一筆／最新 N 筆、某一天適用的體重（`effectiveOnDate()`：當天或之前最新一筆，之前沒有時取最早一筆）、查詢自己的紀錄、筆數、刪除
 
 ### Services
 
@@ -50,7 +50,7 @@
 
 ### Events
 
-（尚無）
+- `ProfileCompleted`（通知型）：完成首次設定、交易成功後發出，帶 `user`；其他模組以此建立初始資料（例如 exercise 的預設分類與項目）
 
 ### Listeners
 
