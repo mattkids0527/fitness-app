@@ -63,6 +63,8 @@
 | `food-analyzer` | 食物照片分析的 driver 合約、Manager、用量上限、`food_analyses` 紀錄 | — |
 | `food-analyzer-gemini` | Gemini driver（Prism） | food-analyzer |
 | `exercise` | 健身項目、有氧／重訓紀錄、熱量計算 | profile |
+| `exercise-identifier` | 照片辨識器材／動作的 driver 合約、Manager、用量上限（M5 追加） | llm-log、profile |
+| `exercise-identifier-gemini` | Gemini driver（Prism）（M5 追加） | exercise-identifier |
 | `water` | 喝水紀錄與建議量 | profile |
 | `daily-summary` | 今日頁（每日分析）；發出收集型事件，由 profile / meal / exercise / water 各自加入當日摘要（M1 先建骨架） | — |
 
@@ -96,6 +98,7 @@
 
 ### 3.4 健身紀錄
 - **健身項目（範本）**：先建立再使用。系統內建常見項目（附 MET 值），使用者可新增自訂項目。
+  - M5 改為使用者自建分類（各自選「填時長／逐組」）＋預設資料複製，並新增照片辨識器材／動作，見 [M5 規格](2026-11-21-m5-exercise.md)。
 - 項目分兩類：
   - **有氧／時間型**：`kcal = MET × 體重kg × 時數`
   - **重訓型（已決）**：記錄**每一組的次數 × 重量**
