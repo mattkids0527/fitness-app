@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+        <title>M5 健身紀錄 demo</title>
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+        <header class="toolbar">
+            <h1>M5 健身紀錄</h1>
+            <div class="group">
+                <span class="group-label">主題</span>
+                <button data-tool="theme" data-value="light" class="on">淺色</button>
+                <button data-tool="theme" data-value="dark">深色</button>
+            </div>
+            <div class="group">
+                <span class="group-label">裝置</span>
+                <button data-tool="device" data-value="phone" class="on">手機</button>
+                <button data-tool="device" data-value="desktop">桌機</button>
+            </div>
+            <div class="group">
+                <label class="group-label" for="tool-result">辨識結果</label>
+                <select id="tool-result" data-tool="result">
+                    <option value="smith">成功：史密斯機（3 個候選）</option>
+                    <option value="plank">成功：棒式（要新建分類）</option>
+                    <option value="not_exercise">看不出器材或動作</option>
+                    <option value="busy">Gemini 忙碌（免費層限制）</option>
+                    <option value="timeout">逾時</option>
+                    <option value="failed">其他錯誤</option>
+                </select>
+            </div>
+            <div class="group">
+                <label class="group-label" for="tool-quota">今天剩餘</label>
+                <select id="tool-quota" data-tool="quota">
+                    <option value="7">7 次</option>
+                    <option value="1">1 次</option>
+                    <option value="0">0 次（已達上限）</option>
+                </select>
+            </div>
+            <div class="group">
+                <button data-tool="reset">從頭開始</button>
+            </div>
+        </header>
+
+        <main>
+            <section class="topic">
+                <h2>流程試玩</h2>
+                <p>
+                    從健身頁開始：按「新增」或底部的 ＋ →「健身」選項目 → 記錄（填時長或逐組，數字可以實際輸入，消耗熱量即時計算）→
+                    儲存。也可以進「分類與項目」新增分類、項目，或在選擇項目面板用「拍照辨識」「上傳照片」試照片辨識（工具列切換辨識結果與剩餘次數）。
+                </p>
+                <div id="flow"></div>
+            </section>
+
+            <section class="topic">
+                <h2>畫面一覽</h2>
+                <p>每個狀態各一張，編號對應 README 的畫面情境。範例使用者目前體重 70 kg，每日熱量目標 2,000 kcal；demo 的「現在」是 2026/11/21 19:42。</p>
+                <div id="gallery" class="gallery"></div>
+            </section>
+        </main>
+
+        <!-- 拍照開後鏡頭；上傳開相簿或檔案（桌機的 capture 會被忽略） -->
+        <input id="file-camera" type="file" accept="image/*" capture="environment" hidden />
+        <input id="file-upload" type="file" accept="image/*" hidden />
+
+        <script src="icons.js"></script>
+        <script src="app.js"></script>
+    </body>
+</html>
